@@ -17,6 +17,20 @@ export const polar = (r, degrees) => [
   r * Math.sin(degrees * DEG),
 ]
 
+/**
+ * Yaw values for placing a building on the island's radial grid.
+ *
+ * Named rather than written inline because getting the sign wrong silently turns a
+ * facade to face the mountain instead of the harbour, which is invisible in code and
+ * obvious on screen.
+ *
+ * `outwardYaw` puts the object's local +Z radially outward — downhill, toward the sea.
+ * `inwardYaw` puts local +Z radially inward — uphill, toward the summit.
+ * In both, local X runs tangentially, along the terrace street.
+ */
+export const outwardYaw = (bearingDeg) => (90 - bearingDeg) * DEG
+export const inwardYaw = (bearingDeg) => -(bearingDeg + 90) * DEG
+
 export const SEA_LEVEL = 0
 export const ISLAND_RADIUS = 400
 export const SUMMIT_HEIGHT = 96
@@ -85,8 +99,8 @@ export const RING_CANALS = [
 ]
 
 export const GREAT_FOUNTAIN = {
-  basinRadius: 48,
-  spireHeight: 58, // above the summit plaza, tip ~120 m absolute
+  basinRadius: 52,
+  spireHeight: 74, // above the summit plaza; tip lands near 200 m absolute
 }
 
 /**

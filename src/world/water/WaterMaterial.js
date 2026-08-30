@@ -125,10 +125,10 @@ const fragmentShader = /* glsl */ `
     col += uSunColor * sheen * 0.16;
 
     // Foam: against the banks, and where the ripple crests pile up.
-    float bank = smoothstep(0.72, 1.0, vEdge) * uFoam;
-    float crest = smoothstep(0.55, 0.95, nT.y) * uFoam * 0.35;
+    float bank = smoothstep(0.88, 1.0, vEdge) * uFoam;
+    float crest = smoothstep(0.68, 0.97, nT.y) * uFoam * 0.22;
     float foam = clamp(bank + crest, 0.0, 1.0);
-    col = mix(col, vec3(0.94, 0.97, 0.98), foam * 0.75);
+    col = mix(col, vec3(0.94, 0.97, 0.98), foam * 0.7);
 
     gl_FragColor = vec4(col, mix(uOpacity, 1.0, foam * 0.8));
     #include <tonemapping_fragment>

@@ -26,25 +26,27 @@ class StripBuilder {
    *                        half:number, flow:[number,number]}} sample
    * @param {number} steps
    */
-  strip(sample, steps) {
+  strip(sample, steps, across = 5) {
     const base = this.pos.length / 3
     for (let j = 0; j <= steps; j++) {
       const s = sample(j / steps)
-      for (let k = -1; k <= 1; k++) {
+      for (let k = 0; k < across; k++) {
+        const u = -1 + (2 * k) / (across - 1) // -1 .. 1 across the channel
         this.pos.push(
-          s.c[0] + s.across[0] * s.half * k,
+          s.c[0] + s.across[0] * s.half * u,
           s.y,
-          s.c[1] + s.across[1] * s.half * k,
+          s.c[1] + s.across[1] * s.half * u,
         )
         this.flow.push(s.flow[0], s.flow[1])
-        this.edge.push(Math.abs(k))
+        this.edge.push(Math.abs(u))
       }
     }
     for (let j = 0; j < steps; j++) {
-      const a = base + j * 3
-      const b = a + 3
-      this.idx.push(a, a + 1, b, a + 1, b + 1, b)
-      this.idx.push(a + 1, a + 2, b + 1, a + 2, b + 2, b + 1)
+      for (let k = 0; k < across - 1; k++) {
+        const a = base + j * across + k
+        const b = a + across
+        this.idx.push(a, a + 1, b, a + 1, b + 1, b)
+      }
     }
   }
 

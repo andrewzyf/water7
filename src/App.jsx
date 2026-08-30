@@ -85,7 +85,7 @@ export default function App() {
           gl.toneMapping = THREE.ACESFilmicToneMapping
           gl.toneMappingExposure = 1.06
           // Light haze only — Water 7 is almost always shown in clear afternoon air.
-          scene.fog = new THREE.FogExp2(SKY.fog, 0.00028)
+          scene.fog = new THREE.FogExp2(SKY.fog, 0.000115)
         }}
       >
         <Sky

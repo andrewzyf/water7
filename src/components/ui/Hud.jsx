@@ -26,7 +26,7 @@ const key = {
   textAlign: 'center',
 }
 
-export default function Hud({ playerState, showLabels, showMap }) {
+export default function Hud({ playerState, showLabels, showMap, mode, quality }) {
   const [info, setInfo] = useState(null)
 
   useEffect(() => {
@@ -39,6 +39,7 @@ export default function Hud({ playerState, showLabels, showMap }) {
         alt: p.y,
         running: p.running,
         onBridge: p.onBridge,
+        speed: p.speed,
       })
     }, 140)
     return () => clearInterval(id)
@@ -55,26 +56,32 @@ export default function Hud({ playerState, showLabels, showMap }) {
           {info?.onBridge ? ' · on a bridge' : ''}
         </div>
         <div style={{ opacity: 0.6, fontSize: 11.5 }}>
-          elevation {info ? info.alt.toFixed(1) : '0.0'} m
+          {mode === 'boat'
+            ? `under way · ${Math.abs(info?.speed ?? 0).toFixed(1)} m/s`
+            : `elevation ${info ? info.alt.toFixed(1) : '0.0'} m`}
         </div>
       </div>
 
       <div style={{ ...panel, bottom: 12, left: 12 }}>
-        <span style={key}>W</span><span style={key}>A</span><span style={key}>S</span><span style={key}>D</span> walk
-        &nbsp;·&nbsp; <span style={key}>Shift</span> run
-        &nbsp;·&nbsp; <b>click</b> to look around
+        {mode === 'boat' ? (
+          <>
+            <span style={key}>W</span><span style={key}>S</span> throttle
+            &nbsp;·&nbsp; <span style={key}>A</span><span style={key}>D</span> steer
+            &nbsp;·&nbsp; <b>click</b> to look around
+          </>
+        ) : (
+          <>
+            <span style={key}>W</span><span style={key}>A</span><span style={key}>S</span><span style={key}>D</span> walk
+            &nbsp;·&nbsp; <span style={key}>Shift</span> run
+            &nbsp;·&nbsp; <b>click</b> to look around
+          </>
+        )}
         <br />
-        <span style={key}>M</span> layout map {showMap ? '(open)' : ''}
+        <span style={key}>E</span> {mode === 'boat' ? 'step ashore' : 'board a boat (near water)'}
+        &nbsp;·&nbsp; <span style={key}>M</span> map
         &nbsp;·&nbsp; <span style={key}>L</span> labels {showLabels ? 'on' : 'off'}
-        &nbsp;·&nbsp; <span style={key}>Esc</span> release cursor
-      </div>
-
-      <div style={{ ...panel, top: 12, right: 12, maxWidth: 230 }}>
-        <b>Blockout</b> — layout review build.
-        <div style={{ opacity: 0.72, marginTop: 3 }}>
-          Massing and geography only. Detailed geometry is held until the layout is
-          signed off.
-        </div>
+        &nbsp;·&nbsp; <span style={key}>Q</span> graphics: <b>{quality}</b>
+        &nbsp;·&nbsp; <span style={key}>Esc</span> cursor
       </div>
     </>
   )

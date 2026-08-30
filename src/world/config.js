@@ -148,7 +148,11 @@ export const SEA_TRAIN = {
 }
 
 /** Player spawn: the tier-0 quay just west of Dock 1, facing the harbour. */
-/** Player spawn: the tier-0 quay beside Dock 1, at the foot of the main spine. */
-export const SPAWN = { bearing: 92, radius: 318 }
+/**
+ * Player spawn: the tier-0 quay between Dock 1 and the dock canal, at the foot of the
+ * ceremonial spine. Close enough to the water that boarding a boat is the obvious first
+ * thing to try.
+ */
+export const SPAWN = { bearing: 92, radius: 359 }
 
 export const AQUA_LAGUNA_SURGE = 6 // metres; drowns tier 0, stops at the tier-1 wall

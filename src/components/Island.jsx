@@ -22,7 +22,7 @@ const BED = c('#5c6f63')
  */
 export default function Island() {
   const geometry = useMemo(() => {
-    const geo = buildIslandGeometry(THREE, { radialSegments: 768, ringSegments: 280 })
+    const geo = buildIslandGeometry(THREE, { radialSegments: 640, ringSegments: 240 })
     const pos = geo.attributes.position
     const nrm = geo.attributes.normal
     const colors = new Float32Array(pos.count * 3)

@@ -120,7 +120,7 @@ const fragmentShader = /* glsl */ `
     // Sun glitter.
     vec3 H = normalize(uSunDir + V);
     float spec = pow(max(dot(N, H), 0.0), 220.0);
-    col += uSunColor * spec * 2.6;
+    col += uSunColor * spec * 1.9;
     float sheen = pow(max(dot(N, H), 0.0), 26.0);
     col += uSunColor * sheen * 0.16;
 

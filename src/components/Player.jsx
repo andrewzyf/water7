@@ -34,7 +34,7 @@ function hitsBuilding(x, z, colliders) {
  * volumes. Blocked moves are retried on each axis alone, so you slide along walls
  * instead of sticking to them.
  */
-export default function Player({ colliders, playerState }) {
+export default function Player({ colliders, playerState, active = true, spawnOverride }) {
   const { camera, gl } = useThree()
   const body = useRef()
   const keys = useRef({})
@@ -49,9 +49,13 @@ export default function Player({ colliders, playerState }) {
   }, [])
 
   useEffect(() => {
-    pos.current.copy(spawn)
-    camPos.current.set(spawn.x, spawn.y + 8, spawn.z + 12)
-  }, [spawn])
+    // A landing spot from the boat takes precedence over the default quay spawn.
+    const p = spawnOverride
+      ? new THREE.Vector3(spawnOverride.x, spawnOverride.y, spawnOverride.z)
+      : spawn
+    pos.current.copy(p)
+    camPos.current.set(p.x, p.y + 8, p.z + 12)
+  }, [spawn, spawnOverride])
 
   useEffect(() => {
     const down = (e) => {
@@ -81,6 +85,7 @@ export default function Player({ colliders, playerState }) {
   }, [gl])
 
   useFrame((_, rawDelta) => {
+    if (!active) return
     const dt = Math.min(rawDelta, 0.05)
     const k = keys.current
     const { yaw, pitch } = look.current
@@ -169,6 +174,7 @@ export default function Player({ colliders, playerState }) {
     }
   })
 
+  if (!active) return null
   return (
     <group ref={body}>
       <mesh position={[0, 0.55, 0]} castShadow>

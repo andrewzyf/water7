@@ -176,9 +176,20 @@ why the script exists.
 1. ✅ Research + this layout plan
 2. ✅ **Blockout** — terrain terraces, canal network, water, placeholder massing for
    every landmark in correct relative position
-3. ✅ Third-person character controller + collision (so the layout can be walked now)
-4. ⬜ Detailed landmark geometry — Station → Docks 1–6 → HQ → Franky House → districts
-5. ⬜ Boat + sailing
-6. ⬜ Lighting, atmosphere, ambient detail, polish
+3. ✅ Third-person character controller + collision
+4. ✅ Detailed geometry — Great Fountain, Docks 1–7, Galley-La HQ, Blue Station and the
+   Puffing Tom, Franky House, Scrap Island, and ~500 detailed residential buildings
+5. ✅ Boat + sailing, with `E` to board and step ashore
+6. ✅ Flowing water, 25 terrace waterfalls, procedural textures, street props,
+   lighting and post-processing
 
-**Step 4 is gated on layout sign-off**, per the brief.
+Still open, in rough order of value:
+
+- **Yagara Bulls.** The canal traffic is boats without their seahorse teams. This is the
+  most conspicuous missing piece of Water 7's character.
+- **Ambient life.** No pedestrians, birds or audio. The city is built but empty.
+- **Aqua Laguna.** The flood line is encoded in the geography (tier 0 sits 3 m above the
+  sea) but the storm itself is not implemented.
+- **Interiors.** Every door and window is exterior dressing; nothing opens.
+- **Further de-regularisation.** The plan is far less concentric than the first pass but
+  still more orderly than the anime's organic sprawl.

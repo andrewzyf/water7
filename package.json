@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "verify": "node scripts/verify-layout.mjs"
+    "verify": "node scripts/verify-layout.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "perf": "node scripts/perf.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.3",

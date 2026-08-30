@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
+import Batch from './Batch.jsx'
 import { generateDetail } from '../world/buildingDetail.js'
 import { plasterTexture, roofTileTexture, roofArcTexture, ashlarTexture, timberTexture, windowTexture } from '../world/textures.js'
 
@@ -23,46 +24,6 @@ function prismGeometry() {
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
   g.computeVertexNormals()
   return g
-}
-
-/** One InstancedMesh driven by a list of {position, rotation, scale, color}. */
-function Batch({ geometry, items, children, castShadow = true, receiveShadow = true }) {
-  const ref = useRef()
-  useLayoutEffect(() => {
-    const mesh = ref.current
-    if (!mesh) return
-    const m = new THREE.Matrix4()
-    const q = new THREE.Quaternion()
-    const e = new THREE.Euler()
-    const v = new THREE.Vector3()
-    const s = new THREE.Vector3()
-    const col = new THREE.Color()
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i]
-      e.set(0, it.rotation, 0)
-      q.setFromEuler(e)
-      v.set(...it.position)
-      s.set(...it.scale)
-      m.compose(v, q, s)
-      mesh.setMatrixAt(i, m)
-      mesh.setColorAt(i, col.set(it.color))
-    }
-    mesh.instanceMatrix.needsUpdate = true
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-    mesh.computeBoundingSphere()
-  }, [items])
-
-  if (items.length === 0) return null
-  return (
-    <instancedMesh
-      ref={ref}
-      args={[geometry, undefined, items.length]}
-      castShadow={castShadow}
-      receiveShadow={receiveShadow}
-    >
-      {children}
-    </instancedMesh>
-  )
 }
 
 /**
@@ -167,13 +128,8 @@ export default function City({ buildings }) {
         <meshStandardMaterial roughness={0.9} />
       </Batch>
       <Batch geometry={geos.windowQuad} items={detail.windows} castShadow={false} receiveShadow={false}>
-        <meshStandardMaterial
-          map={tex.window}
-          transparent
-          alphaTest={0.35}
-          roughness={0.55}
-          side={THREE.DoubleSide}
-        />
+        {/* Single-sided: a window is only ever seen from outside its own wall. */}
+        <meshStandardMaterial map={tex.window} transparent alphaTest={0.4} roughness={0.55} />
       </Batch>
       <Batch geometry={geos.box} items={detail.doors} castShadow={false}>
         <meshStandardMaterial map={tex.timber} roughness={0.85} />

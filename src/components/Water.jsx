@@ -149,7 +149,9 @@ function buildSea() {
       // A steady offshore drift; the swell in the vertex shader does the rest.
       flow.push(0.42, 0.26)
       const shore = terraceOuterAt(TIERS[TIERS.length - 1], deg)
-      edge.push(1 - THREE.MathUtils.clamp((r - shore) / 46, 0, 1))
+      // A long falloff: a short one reads as a hard-edged band lying on the sea rather
+      // than as water shoaling toward the shore.
+      edge.push(1 - THREE.MathUtils.clamp((r - shore) / 150, 0, 1))
     }
   }
   const stride = SEG + 1
@@ -188,10 +190,10 @@ export default function Water({ sunDirection }) {
     waveScale: 0.013,
     flowSpeed: 0.05,
     rippleScale: 0.022,
-    foam: 1.0,
+    foam: 0.55,
     opacity: 0.94,
-    shallow: '#3ba7bd',
-    deep: '#0d3f5e',
+    shallow: '#2d8fae',
+    deep: '#0e4463',
   }), [])
 
   const mats = useRef([canalMat, seaMat])

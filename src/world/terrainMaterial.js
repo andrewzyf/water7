@@ -30,7 +30,7 @@ export function createTerrainMaterial() {
     shader.uniforms.uPaving = { value: paving }
     shader.uniforms.uWall = { value: wall }
     shader.uniforms.uPavingScale = { value: 0.055 }
-    shader.uniforms.uWallScale = { value: 0.032 }
+    shader.uniforms.uWallScale = { value: 0.085 }
 
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `

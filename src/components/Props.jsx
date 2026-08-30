@@ -112,7 +112,7 @@ export default function Props({ buildings }) {
       </Batch>
 
       <Batch geometry={geos.boat} items={props.boats}>
-        <meshStandardMaterial map={tex.timber} roughness={0.88} />
+        <meshStandardMaterial map={tex.timber} roughness={0.88} side={THREE.DoubleSide} />
       </Batch>
       <Batch geometry={geos.box} items={boatAwnings} receiveShadow={false}>
         <meshStandardMaterial roughness={0.85} />

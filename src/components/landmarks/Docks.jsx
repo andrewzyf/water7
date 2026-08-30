@@ -172,9 +172,12 @@ function Dock({ dock, tex }) {
           <boxGeometry args={[dock.width + 12, 2.2, 6.4]} />
           <meshStandardMaterial map={tex.plaster} color="#efe6d2" roughness={0.85} />
         </mesh>
+        {/* Depth must match the gate wall (4.5), not the cornice: a vault longer than
+            the wall is deep pushes its end caps proud and shows the whole disc. Rise is
+            shallow because this is a capping roof over an 80 m gate, not a dome. */}
         <BarrelRoof
           position={[0, gateH + 2.2, 0]}
-          width={dock.width + 12} depth={6.4} rise={0.3}
+          width={dock.width + 12} depth={4.4} rise={0.14}
           map={tex.tile} color={PALETTE.terracotta[0]}
         />
         {/* Numeral plaque, on the face you read from the water. */}

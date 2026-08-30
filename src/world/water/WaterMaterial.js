@@ -115,7 +115,10 @@ const fragmentShader = /* glsl */ `
     // Sky reflection, biased to the horizon at grazing angles.
     vec3 R = reflect(-V, N);
     vec3 sky = mix(uHorizonColor, uSkyColor, clamp(R.y * 1.4, 0.0, 1.0));
-    vec3 col = mix(base, sky, clamp(fres * 1.15, 0.0, 0.9));
+    // Capped well below 1: at grazing angles a physically-full Fresnel turns a canal
+    // into a ribbon of sky, and Water 7's canals read as green water from every angle
+    // in the reference art.
+    vec3 col = mix(base, sky, clamp(fres * 0.85, 0.0, 0.62));
 
     // Sun glitter.
     vec3 H = normalize(uSunDir + V);
@@ -165,7 +168,7 @@ export function createWaterMaterial({
       uSunDir: { value: new THREE.Vector3(-0.62, 0.5, 0.45).normalize() },
       uSunColor: { value: new THREE.Color('#fff1d6') },
       uSkyColor: { value: new THREE.Color('#7fc0e2') },
-      uHorizonColor: { value: new THREE.Color('#d5e8f0') },
+      uHorizonColor: { value: new THREE.Color('#9fc4d2') },
       uWaveAmp: { value: waveAmp },
       uWaveScale: { value: waveScale },
       uFlowSpeed: { value: flowSpeed },

@@ -13,6 +13,7 @@ import Waterfalls from './components/Waterfalls.jsx'
 import CanalEdges from './components/CanalEdges.jsx'
 import Ramps from './components/Ramps.jsx'
 import Props from './components/Props.jsx'
+import CanalTraffic from './components/CanalTraffic.jsx'
 import City from './components/City.jsx'
 import BridgesMesh from './components/Bridges.jsx'
 import GreatFountain from './components/landmarks/GreatFountain.jsx'
@@ -162,6 +163,7 @@ export default function App() {
         <CanalEdges />
         <Ramps />
         <Props buildings={buildings} />
+        <CanalTraffic />
         <GreatFountain />
         <Docks />
         <GalleyLaHQ />

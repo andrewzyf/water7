@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { buildIslandGeometry } from '../world/terrain.js'
+import { buildIslandGeometry, canalMask, bearingOf, dockMask } from '../world/terrain.js'
 import { PALETTE } from '../world/palette.js'
 import { createTerrainMaterial } from '../world/terrainMaterial.js'
 
@@ -11,6 +11,9 @@ const QUAY = c(PALETTE.quay)
 const WALL = c(PALETTE.ashlar)
 const WALL_DARK = c(PALETTE.ashlarDark)
 const BED = c('#5c6f63')
+/** Silt on a canal floor — dark and green, so water over it reads as having depth. */
+const CANAL_BED = c('#47605a')
+const CANAL_SIDE = c('#6e746e')
 
 /**
  * The island itself, built from the analytic height field.
@@ -33,7 +36,14 @@ export default function Island() {
       const ny = nrm.getY(i)
       const r = Math.hypot(pos.getX(i), pos.getZ(i))
 
-      if (ny < 0.62) {
+      // Anything inside a canal channel is bed or bank, never street paving: leaving
+      // the cobbles on a canal floor makes the water read as a puddle over pavement.
+      const inCanal = canalMask(r, bearingOf(pos.getX(i), pos.getZ(i))) > 0.5
+        && dockMask(r, bearingOf(pos.getX(i), pos.getZ(i))) < 0.3
+
+      if (inCanal) {
+        tmp.copy(ny < 0.62 ? CANAL_SIDE : CANAL_BED)
+      } else if (ny < 0.62) {
         // Steep: a terrace retaining wall or a canal side.
         tmp.copy(y < 2 ? WALL_DARK : WALL)
       } else if (y < -6) {

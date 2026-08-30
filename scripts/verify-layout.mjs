@@ -15,6 +15,7 @@ import { canalBearingAt, ringRadiusAt, terraceOuterAt } from '../src/world/shape
 import { angDelta, dockMask, canalMask, heightAt } from '../src/world/terrain.js'
 import { DOCK_BASIN } from '../src/world/terrain.js'
 import { BRIDGES } from '../src/world/bridges.js'
+import { buildCanals, buildSea, meanNormalY } from '../src/world/water/canalGeometry.js'
 import { sampleSurface, canStand } from '../src/world/nav.js'
 
 let failures = 0
@@ -124,6 +125,16 @@ console.log('\n== The dock canal threads between the basins and the shore ==')
     `min gap ${minGapToBasin.toFixed(1)} m`)
   check('dock canal stays inside the shoreline', minGapToShore > 0,
     `min gap ${minGapToShore.toFixed(1)} m`)
+}
+
+// A water surface wound face-down is back-face culled, so the canal simply looks
+// drained. That has slipped through twice; it is asserted now.
+console.log('\n== Water surfaces face upward ==')
+{
+  const canals = meanNormalY(buildCanals())
+  const sea = meanNormalY(buildSea())
+  check('canal network faces up', canals > 0.9, `mean normal.y = ${canals.toFixed(3)}`)
+  check('sea faces up', sea > 0.9, `mean normal.y = ${sea.toFixed(3)}`)
 }
 
 console.log('\n== Spawn point is on dry, standable ground ==')

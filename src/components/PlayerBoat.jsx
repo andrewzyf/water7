@@ -149,7 +149,7 @@ export default function PlayerBoat({ active, onExit, spawn, playerState }) {
   return (
     <group ref={hull}>
       <mesh geometry={geo} castShadow receiveShadow>
-        <meshStandardMaterial map={timber} color="#8a6a45" roughness={0.86} />
+        <meshStandardMaterial map={timber} color="#8a6a45" roughness={0.86} side={THREE.DoubleSide} />
       </mesh>
       {/* Awning over the after thwart. */}
       <mesh position={[0, 2.0, -1.2]} castShadow>

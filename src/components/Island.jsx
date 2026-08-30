@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import { buildIslandGeometry } from '../world/terrain.js'
 import { PALETTE } from '../world/palette.js'
+import { createTerrainMaterial } from '../world/terrainMaterial.js'
 
 const c = (hex) => new THREE.Color(hex)
 const SEABED = c('#4a5f63')
@@ -50,9 +51,7 @@ export default function Island() {
     return geo
   }, [])
 
-  return (
-    <mesh geometry={geometry} receiveShadow castShadow>
-      <meshStandardMaterial vertexColors roughness={0.94} metalness={0} />
-    </mesh>
-  )
+  const material = useMemo(createTerrainMaterial, [])
+
+  return <mesh geometry={geometry} material={material} receiveShadow castShadow />
 }

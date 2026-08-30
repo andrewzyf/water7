@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { BRIDGES } from '../world/bridges.js'
 import { DEG } from '../world/config.js'
 import { PALETTE } from '../world/palette.js'
+import { ashlarTexture } from '../world/textures.js'
 
 /**
  * The stone footbridges, drawn from the same list the height field uses — so what you
@@ -12,6 +13,7 @@ import { PALETTE } from '../world/palette.js'
 export default function Bridges() {
   const geometry = useMemo(() => {
     const positions = []
+    const uvs = []
     const indices = []
     const HALF_W = 3.8
     const RISE = 1.9
@@ -37,7 +39,9 @@ export default function Bridges() {
           const px = cx + acrossVec[0] * s + alongVec[0] * w * HALF_W
           const pz = cz + acrossVec[1] * s + alongVec[1] * w * HALF_W
           positions.push(px, y, pz)          // deck
+          uvs.push((w + 1) / 2, t * 2.4)
           positions.push(px, y - THICK, pz)  // soffit
+          uvs.push((w + 1) / 2, t * 2.4)
         }
       }
       // 4 verts per step: [L-top, L-bot, R-top, R-bot]
@@ -54,14 +58,26 @@ export default function Bridges() {
 
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
     g.setIndex(indices)
     g.computeVertexNormals()
     return g
   }, [])
 
+  const stone = useMemo(() => {
+    const t = ashlarTexture(512, 6)
+    t.repeat.set(1, 1)
+    return t
+  }, [])
+
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
-      <meshStandardMaterial color={PALETTE.quay} roughness={0.92} side={THREE.DoubleSide} />
+      <meshStandardMaterial
+        map={stone}
+        color={PALETTE.quay}
+        roughness={0.92}
+        side={THREE.DoubleSide}
+      />
     </mesh>
   )
 }

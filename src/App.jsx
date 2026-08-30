@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Sky, AdaptiveDpr, Preload } from '@react-three/drei'
+import { Sky, AdaptiveDpr, Preload, SoftShadows } from '@react-three/drei'
+import { EffectComposer, Bloom, SMAA, Vignette, BrightnessContrast, HueSaturation } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
 import { generateCity, buildColliders } from './world/city.js'
@@ -8,6 +9,7 @@ import './world/debugCamera.js'
 import { SKY } from './world/palette.js'
 import Island from './components/Island.jsx'
 import Water from './components/Water.jsx'
+import Waterfalls from './components/Waterfalls.jsx'
 import City from './components/City.jsx'
 import BridgesMesh from './components/Bridges.jsx'
 import GreatFountain from './components/landmarks/GreatFountain.jsx'
@@ -20,6 +22,10 @@ import Hud from './components/ui/Hud.jsx'
 import Labels from './components/ui/Labels.jsx'
 import MapView from './components/ui/MapView.jsx'
 
+/** One sun, shared by the light, the sky and the water's specular. */
+export const SUN = new THREE.Vector3(-420, 300, 320)
+export const SUN_DIR = SUN.clone().normalize()
+
 /**
  * Warm, low afternoon sun — the light Water 7 is almost always shown in. Shadow camera
  * is sized to the whole island so the terraces cast onto each other, which is most of
@@ -28,22 +34,25 @@ import MapView from './components/ui/MapView.jsx'
 function Lighting() {
   return (
     <>
-      <hemisphereLight args={['#cfe6f2', '#7a7160', 0.62]} />
-      <ambientLight intensity={0.24} />
+      <hemisphereLight args={['#d3e8f4', '#8a7a60', 0.55]} />
+      <ambientLight intensity={0.2} />
       <directionalLight
-        position={[-420, 320, 300]}
-        intensity={2.1}
+        position={[SUN.x, SUN.y, SUN.z]}
+        intensity={2.5}
         color={SKY.sun}
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-620}
-        shadow-camera-right={620}
-        shadow-camera-top={620}
-        shadow-camera-bottom={-620}
+        shadow-mapSize={[4096, 4096]}
+        shadow-camera-left={-520}
+        shadow-camera-right={520}
+        shadow-camera-top={520}
+        shadow-camera-bottom={-520}
         shadow-camera-near={1}
-        shadow-camera-far={1600}
-        shadow-bias={-0.0006}
+        shadow-camera-far={1500}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.6}
       />
+      {/* A cool bounce from the opposite side keeps shadowed facades from going flat. */}
+      <directionalLight position={[380, 180, -300]} intensity={0.34} color="#bcd8ea" />
     </>
   )
 }
@@ -69,23 +78,25 @@ export default function App() {
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Canvas
         shadows
-        dpr={[1, 1.8]}
+        dpr={[1, 2]}
         camera={{ fov: 58, near: 0.4, far: 8000, position: [0, 60, 520] }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        gl={{ antialias: false, powerPreference: 'high-performance' }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping
-          gl.toneMappingExposure = 1.02
-          scene.fog = new THREE.Fog(SKY.fog, 900, 3400)
+          gl.toneMappingExposure = 1.06
+          // Light haze only — Water 7 is almost always shown in clear afternoon air.
+          scene.fog = new THREE.FogExp2(SKY.fog, 0.00028)
         }}
       >
         <Sky
           distance={4500}
-          sunPosition={[-420, 190, 300]}
+          sunPosition={[SUN.x, SUN.y * 0.62, SUN.z]}
           turbidity={5}
           rayleigh={1.4}
           mieCoefficient={0.006}
           mieDirectionalG={0.83}
         />
+        <SoftShadows size={26} samples={12} focus={0.9} />
         <Lighting />
 
         <Island />
@@ -96,13 +107,23 @@ export default function App() {
         <GalleyLaHQ />
         <BlueStation />
         <Outskirts />
-        <Water />
+        <Water sunDirection={SUN_DIR} />
+        <Waterfalls />
 
         <Player colliders={colliders} playerState={playerState} />
         {showLabels && <Labels />}
 
         <AdaptiveDpr pixelated />
         <Preload all />
+
+        <EffectComposer multisampling={0} disableNormalPass>
+          <SMAA />
+          {/* Just enough bloom for sun glitter on the water and the falls to lift. */}
+          <Bloom intensity={0.42} luminanceThreshold={0.72} luminanceSmoothing={0.28} mipmapBlur />
+          <HueSaturation saturation={0.06} />
+          <BrightnessContrast brightness={0.005} contrast={0.055} />
+          <Vignette eskil={false} offset={0.24} darkness={0.42} />
+        </EffectComposer>
       </Canvas>
 
       <Hud playerState={playerState} showLabels={showLabels} showMap={showMap} />

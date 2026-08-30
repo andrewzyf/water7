@@ -11,9 +11,9 @@ export const PALETTE = {
   terracottaLo: '#8f2f24',
   terracottaHi: '#dc9b84', // the concentric salmon arc banding
   // Stone.
-  ashlar:       '#8d94a0',
-  ashlarDark:   '#6f7783',
-  quay:         '#a9a294',
+  ashlar:       '#9c9c98',
+  ashlarDark:   '#7e7d76',
+  quay:         '#b3aa99',
   // Water.
   sea:          '#2a7f9e',
   canal:        '#2f8f8a',

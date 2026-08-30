@@ -17,7 +17,7 @@ import {
   TERRACE_BLEND, RAMP_BEARINGS, RAMP_HALF_WIDTH, RAMP_BLEND,
   RADIAL_CANALS, RING_CANALS, tierAt, canalWaterY, DOCKS,
 } from './config.js'
-import { terraceOuterAt, ringRadiusAt, canalBearingAt } from './shape.js'
+import { terraceOuterAt, ringRadiusAt, canalBearingAt, tierAtBearing } from './shape.js'
 
 /** Dry-dock basins: a notch cut into the rim, stopping short of the sea ring. */
 export const DOCK_BASIN = { innerR: 326, outerR: 356, floorY: -4.2, sillR: 356 }
@@ -92,15 +92,21 @@ export function canalMask(r, bearing) {
   return m
 }
 
-/** Water surface level for whichever terrace this radius belongs to. */
-export function waterLevelAt(r) {
-  const t = tierAt(r)
+/**
+ * Water surface level for whichever terrace this point belongs to.
+ *
+ * Uses the terrace's *real* wobbled edge rather than its nominal radius, so the step
+ * in the water level coincides exactly with the step in the ground — which is what
+ * makes a waterfall land on its own lip instead of hanging in the air.
+ */
+export function waterLevelAt(r, bearing = 0) {
+  const t = tierAtBearing(r, bearing)
   return t ? canalWaterY(t) : SEA_LEVEL
 }
 
 /** Canal bed: stepped per terrace, so terrace crossings become falls. */
-function canalFloor(r) {
-  return waterLevelAt(r) - 2.6
+function canalFloor(r, bearing) {
+  return waterLevelAt(r, bearing) - 2.6
 }
 
 /**
@@ -147,7 +153,7 @@ export function heightAt(x, z) {
 
   const m = canalMask(r, bearing)
   if (m <= 0) return base
-  return base + (canalFloor(r) - base) * m * (1 - dm)
+  return base + (canalFloor(r, bearing) - base) * m * (1 - dm)
 }
 
 /** True where the point is open water the player should not be standing on. */

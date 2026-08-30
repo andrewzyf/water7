@@ -9,7 +9,7 @@
  * meshes, the map — reads it from here.
  */
 
-import { DEG } from './config.js'
+import { DEG, TIERS } from './config.js'
 
 /**
  * Smooth periodic deviation as a function of bearing. Three harmonics so the outline
@@ -43,4 +43,25 @@ export function ringRadiusAt(rc, bearingDeg) {
 /** A radial canal meanders as it descends, rather than running dead straight. */
 export function canalBearingAt(channel, r) {
   return channel.bearing + Math.sin(r / 74 + channel.seed) * channel.meander
+}
+
+/**
+ * A terrace's real radial extent at a bearing, inner and outer.
+ *
+ * Anything that has to line up with a terrace *edge* — the water surface that ends in a
+ * waterfall, the fall itself — needs the wobbled radius, not the nominal one, or it
+ * lands up to 13 m off the step it is supposed to meet.
+ */
+export function tierRangeAt(tier, bearingDeg) {
+  const i = TIERS.indexOf(tier)
+  const inner = i > 0 ? terraceOuterAt(TIERS[i - 1], bearingDeg) : 0
+  return [inner, terraceOuterAt(tier, bearingDeg)]
+}
+
+/** Which terrace a radius falls in at a given bearing, using the real edges. */
+export function tierAtBearing(r, bearingDeg) {
+  for (const t of TIERS) {
+    if (r < terraceOuterAt(t, bearingDeg)) return t
+  }
+  return null
 }

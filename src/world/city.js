@@ -71,21 +71,40 @@ export function generateCity(seed = 20060601) {
         const depth = Math.min(r1 - r0, cellDepth) * rand(rng, 0.66, 0.84)
         const width = Math.min(arcAvail, cellDepth) * rand(rng, 0.66, 0.86)
 
-        // 2-4 storeys, taller on the lower terraces where the old city stacked up.
-        const storeys = 2 + Math.floor(rng() * (tier.id <= 1 ? 3 : 2))
-        const height = storeys * rand(rng, 4.2, 5.0)
+        // Water 7's canal streets are canyons: tall, narrow-fronted houses packed
+        // shoulder to shoulder, 3-6 storeys, tallest on the lower terraces where the
+        // sinking city stacked itself up highest.
+        const storeys = 3 + Math.floor(rng() * (tier.id <= 1 ? 4 : 3))
+        const height = storeys * rand(rng, 3.9, 4.7)
 
         const roll = rng()
         const roof = roll < 0.72 ? ROOF_BARREL : roll < 0.93 ? ROOF_PITCH : ROOF_DOME
 
         const [x, z] = polar(r, bearing)
+        const y = heightAt(x, z)
+        // On sloping ground the far corners sit below the centre, so record how deep
+        // the foundation has to reach for the building not to float.
+        const rot = -(bearing + 90) * DEG
+        const cr = Math.cos(rot)
+        const sr = Math.sin(rot)
+        let lowest = y
+        for (const sx of [-0.5, 0.5]) {
+          for (const sz of [-0.5, 0.5]) {
+            const lx = sx * width
+            const lz = sz * depth
+            lowest = Math.min(lowest, heightAt(x + lx * cr + lz * sr, z - lx * sr + lz * cr))
+          }
+        }
         buildings.push({
           x, z, r, bearing,
-          y: heightAt(x, z),
+          y,
+          footing: Math.max(1.5, y - lowest + 1.6),
           width, depth, height, roof, storeys,
           tier: tier.id,
-          // Long axis follows the street, i.e. tangent to the terrace ring.
-          rotation: -bearing * DEG,
+          // Local X is the street frontage (tangential), local Z the depth into the
+          // block (radial). That puts the barrel vault's banded gable end facing the
+          // terrace street, which is how the reference art reads.
+          rotation: -(bearing + 90) * DEG,
           wall: PALETTE.plaster[Math.floor(rng() * PALETTE.plaster.length)],
           roofColor: PALETTE.terracotta[Math.floor(rng() * PALETTE.terracotta.length)],
         })

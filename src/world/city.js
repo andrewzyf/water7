@@ -19,6 +19,7 @@ import { canalMask, dockMask, angDelta, heightAt } from './terrain.js'
 import { ringRadiusAt, canalBearingAt, terraceOuterAt } from './shape.js'
 import { makeRng, rand } from './rng.js'
 import { PALETTE } from './palette.js'
+import { footprint, FootprintIndex } from './overlap.js'
 
 /** Keep-out discs around the hand-placed landmarks. */
 const EXCLUSIONS = [
@@ -39,6 +40,9 @@ const ROOF_DOME = 'dome'
 export function generateCity(seed = 20060601) {
   const rng = makeRng(seed)
   const buildings = []
+  // Placed footprints, so a new building can be rejected if it would intersect one
+  // already standing. Overlapping boxes render as a single fused, glitched mass.
+  const placed = new FootprintIndex(32)
 
   for (const tier of TIERS) {
     if (tier.id === 4) continue // the summit is the fountain plaza — kept open
@@ -48,7 +52,7 @@ export function generateCity(seed = 20060601) {
     const outer = tier.outer - 13
     if (outer <= inner) continue
 
-    const cellDepth = 16.5
+    const cellDepth = 15.0
     const rings = Math.max(1, Math.round((outer - inner) / cellDepth))
 
     for (let ri = 0; ri < rings; ri++) {
@@ -68,8 +72,8 @@ export function generateCity(seed = 20060601) {
         if (rng() < 0.11) continue // gaps: courtyards, squares, missing teeth
 
         const arcAvail = cellDeg * DEG * r
-        const depth = Math.min(r1 - r0, cellDepth) * rand(rng, 0.66, 0.84)
-        const width = Math.min(arcAvail, cellDepth) * rand(rng, 0.66, 0.86)
+        const depth = Math.min(r1 - r0, cellDepth) * rand(rng, 0.56, 0.72)
+        const width = Math.min(arcAvail, cellDepth) * rand(rng, 0.56, 0.74)
 
         // Water 7's canal streets are canyons: tall, narrow-fronted houses packed
         // shoulder to shoulder, 3-6 storeys, tallest on the lower terraces where the
@@ -95,6 +99,13 @@ export function generateCity(seed = 20060601) {
             lowest = Math.min(lowest, heightAt(x + lx * cr + lz * sr, z - lx * sr + lz * cr))
           }
         }
+        // Plinths stand 0.65 m proud of the walls, so clearance is checked with a
+        // margin rather than edge to edge.
+        const quad = footprint({ x, z, width, depth, rotation: rot }, 0.9)
+        const reach = Math.max(width, depth) + 3
+        if (placed.hits(x, z, reach, quad)) continue
+        placed.add(x, z, reach, quad)
+
         buildings.push({
           x, z, r, bearing,
           y,

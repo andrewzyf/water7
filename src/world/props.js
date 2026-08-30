@@ -13,6 +13,7 @@ import {
 import { ringRadiusAt, canalBearingAt, tierRangeAt } from './shape.js'
 import { isWaterAt, heightAt } from './terrain.js'
 import { makeRng, rand, pick } from './rng.js'
+import { footprint, FootprintIndex, quadsOverlap } from './overlap.js'
 import { PALETTE } from './palette.js'
 
 const unit = (deg) => [Math.cos(deg * DEG), Math.sin(deg * DEG)]
@@ -74,6 +75,22 @@ function walkBanks(spacingM, cb) {
 export function generateProps(buildings, seed = 424242) {
   const rng = makeRng(seed)
 
+  // Props dropped inside a wall read as geometry fused together, which is the same
+  // glitch overlapping buildings cause. Anything placed on the ground is checked
+  // against the city's footprints first.
+  const cityIndex = new FootprintIndex(32)
+  for (const b of buildings) {
+    const quad = footprint(b, 0.6)
+    cityIndex.add(b.x, b.z, Math.max(b.width, b.depth) + 3, quad)
+  }
+  const insideBuilding = (x, z, size = 1.6) => {
+    const quad = [
+      [x - size, z - size], [x + size, z - size],
+      [x + size, z + size], [x - size, z + size],
+    ]
+    return cityIndex.hits(x, z, size + 3, quad)
+  }
+
   const lanternPosts = []
   const lanternHeads = []
   const lanternCaps = []
@@ -91,6 +108,7 @@ export function generateProps(buildings, seed = 424242) {
   walkBanks(11, (p) => {
     n++
     if (isWaterAt(p.x, p.z)) return
+    if (insideBuilding(p.x, p.z, 0.9)) return
     // Alternate: a lamp, then a couple of bollards, then a lamp.
     if (n % 3 === 0) {
       lanternPosts.push({
@@ -149,6 +167,7 @@ export function generateProps(buildings, seed = 424242) {
       const x = px + Math.cos(a) * rad
       const z = pz + Math.sin(a) * rad
       if (isWaterAt(x, z)) continue
+      if (insideBuilding(x, z, 3)) continue
       const gy = heightAt(x, z)
       if (Math.abs(gy - y) > 3) continue
       const yaw = rand(rng, 0, Math.PI * 2)
@@ -183,6 +202,7 @@ export function generateProps(buildings, seed = 424242) {
     const r = rand(rng, 316, 396)
     const [x, z] = polar(r, bearing)
     if (isWaterAt(x, z)) continue
+    if (insideBuilding(x, z, 1.8)) continue
     const gy = heightAt(x, z)
     if (gy < 1 || gy > 8) continue
     if (rng() < 0.5) {

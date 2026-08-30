@@ -28,6 +28,7 @@ import PlayerBoat from './components/PlayerBoat.jsx'
 import { findBoardingSpot, findLandingSpot, findRideableYagara } from './world/boarding.js'
 import { trafficState } from './world/trafficState.js'
 import Hud from './components/ui/Hud.jsx'
+import Music from './components/ui/Music.jsx'
 import MapView from './components/ui/MapView.jsx'
 
 /**
@@ -224,6 +225,7 @@ export default function App() {
         )}
       </Canvas>
 
+      <Music />
       <Hud playerState={playerState} showMap={showMap} mode={mode} quality={qualityName} />
       <MapView playerState={playerState} buildings={buildings} visible={showMap} />
     </div>

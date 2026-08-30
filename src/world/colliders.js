@@ -10,9 +10,10 @@
  * test and neither needs a physics engine.
  */
 import {
-  DOCKS, LANDMARKS, GREAT_FOUNTAIN, FRANKY_SPIT, SCRAP_ISLAND,
+  DOCKS, LANDMARKS, FRANKY_SPIT, SCRAP_ISLAND,
   polar, outwardYaw, tierById,
 } from './config.js'
+import { FOUNTAIN } from './fountainNav.js'
 import { DOCK_BASIN } from './terrain.js'
 
 /** An oriented box, in the same form the city generator emits. */
@@ -44,8 +45,9 @@ function local(bearing, radius, lx, lz) {
 export function landmarkColliders() {
   const out = []
 
-  // --- Great Fountain: the arcaded drum only, so the plaza stays walkable round it ---
-  out.push(circle(0, 0, GREAT_FOUNTAIN.drumRadius, tierById(4).y + 40))
+  // --- Great Fountain: the drum only. The galleries wrapping it are walkable, and the
+  // plaza runs right up to its steps. ---
+  out.push(circle(0, 0, FOUNTAIN.drumRadius - 0.5, tierById(4).y + 80))
 
   // --- Galley-La HQ ---
   {

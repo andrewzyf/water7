@@ -50,6 +50,9 @@ export default function Player({ colliders, playerState, active = true, spawnOve
   const camPos = useRef(new THREE.Vector3())
   const dragging = useRef(false)
   const jumpQueued = useRef(false)
+  // Rendered height, lagging the physics height. Stair treads step 0.38 m at a time and
+  // following them exactly makes the camera judder up every flight.
+  const smoothY = useRef(0)
 
   const spawn = useMemo(() => {
     const [x, z] = polar(SPAWN.radius, SPAWN.bearing)
@@ -61,6 +64,7 @@ export default function Player({ colliders, playerState, active = true, spawnOve
       ? new THREE.Vector3(spawnOverride.x, spawnOverride.y, spawnOverride.z)
       : spawn
     pos.current.copy(p)
+    smoothY.current = p.y
     vy.current = 0
     camPos.current.set(p.x, p.y + 8, p.z + 12)
   }, [spawn, spawnOverride])
@@ -179,7 +183,7 @@ export default function Player({ colliders, playerState, active = true, spawnOve
     }
 
     // Gravity and landing.
-    const s = sampleSurface(here.x, here.z)
+    const s = sampleSurface(here.x, here.z, here.y)
     if (grounded.current) {
       here.y += (s.y - here.y) * Math.min(1, dt * 18)
       if (vy.current > 0) { here.y += vy.current * dt; grounded.current = false }
@@ -198,8 +202,15 @@ export default function Player({ colliders, playerState, active = true, spawnOve
       }
     }
 
+    // Smooth the *rendered* height while physics keeps the exact one, so climbing a
+    // stair reads as a walk up rather than a series of jolts. Snapped when falling
+    // fast, so a real drop still lands hard.
+    const lag = grounded.current ? Math.min(1, dt * 11) : 1
+    smoothY.current += (here.y - smoothY.current) * lag
+    const drawY = smoothY.current
+
     if (body.current) {
-      body.current.position.set(here.x, here.y + 0.9, here.z)
+      body.current.position.set(here.x, drawY + 0.9, here.z)
       body.current.rotation.y = facing.current
     }
 
@@ -218,12 +229,12 @@ export default function Player({ colliders, playerState, active = true, spawnOve
     const dist = zoom.current
     const cx = here.x + Math.sin(yaw) * Math.cos(pitch) * dist
     const cz = here.z + Math.cos(yaw) * Math.cos(pitch) * dist
-    const cy = here.y + EYE + Math.sin(-pitch) * dist + dist * 0.16
-    const groundAtCam = sampleSurface(cx, cz).y
+    const cy = drawY + EYE + Math.sin(-pitch) * dist + dist * 0.16
+    const groundAtCam = sampleSurface(cx, cz, here.y).y
     const target = new THREE.Vector3(cx, Math.max(cy, groundAtCam + 2.0), cz)
     camPos.current.lerp(target, Math.min(1, dt * 12))
     camera.position.copy(camPos.current)
-    camera.lookAt(here.x, here.y + EYE, here.z)
+    camera.lookAt(here.x, drawY + EYE, here.z)
 
     playerState.current = {
       x: here.x, y: here.y, z: here.z,

@@ -83,6 +83,7 @@ export default function Hud({ playerState, showMap, mode, quality }) {
         <span style={key}>E</span> {mode === 'boat' ? 'dismount' : 'ride a Yagara or take a boat (near water)'}
         &nbsp;·&nbsp; <span style={key}>M</span> map
         &nbsp;·&nbsp; <span style={key}>Q</span> graphics: <b>{quality}</b>
+        &nbsp;·&nbsp; <span style={key}>N</span> music
         &nbsp;·&nbsp; <span style={key}>Esc</span> cursor
       </div>
     </>

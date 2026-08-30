@@ -7,25 +7,49 @@
 import { heightAt as groundAt, isWaterAt, bearingOf } from './terrain.js'
 import { bridgeHeightAt } from './bridges.js'
 import { rampHeightAt } from './ramps.js'
+import { fountainHeightAt } from './fountainNav.js'
 
 /**
- * The surface the player stands on at (x, z): the ground, or whatever built structure
- * sits on top of it — a bridge deck, or a ramp's stair tread.
+ * The surface a walker stands on at (x, z).
+ *
+ * The island is not single-storeyed: bridges span canals, ramps carry stair treads, and
+ * the fountain has galleries thirty metres over the plaza that people also walk beneath.
+ * So this collects every candidate surface and picks one **relative to where the walker
+ * already is** — the highest that is not out of reach above them. Without `fromY` it
+ * falls back to the topmost structure, which is what a standing-start query wants.
+ *
+ * This is why you can stand under the fountain's upper balcony instead of being
+ * teleported onto it.
  */
-export function sampleSurface(x, z) {
+export function sampleSurface(x, z, fromY = null) {
   const ground = groundAt(x, z)
+  const water = isWaterAt(x, z)
 
+  const candidates = []
   const bridge = bridgeHeightAt(x, z)
-  if (bridge !== null && bridge >= ground - 0.5) {
-    return { y: bridge, water: false, onBridge: true }
-  }
-
+  if (bridge !== null) candidates.push({ y: bridge, water: false, onBridge: true })
   const tread = rampHeightAt(x, z)
-  if (tread !== null && tread >= ground - 0.6) {
-    return { y: tread, water: false, onBridge: false, onSteps: true }
+  if (tread !== null) candidates.push({ y: tread, water: false, onSteps: true })
+  const platform = fountainHeightAt(x, z)
+  if (platform !== null) candidates.push({ y: platform, water: false, onFountain: true })
+
+  if (!candidates.length) return { y: ground, water, onBridge: false }
+
+  if (fromY === null) {
+    // No context: take the topmost structure that is not below the ground.
+    let best = { y: ground, water, onBridge: false }
+    for (const c of candidates) if (c.y > best.y - 0.5) best = c
+    return best
   }
 
-  return { y: ground, water: isWaterAt(x, z), onBridge: false }
+  const reach = fromY + MAX_STEP_UP
+  let best = null
+  for (const c of [...candidates, { y: ground, water, onBridge: false }]) {
+    if (c.y > reach) continue
+    if (!best || c.y > best.y) best = c
+  }
+  // Below everything — the walker is falling, so aim at the ground.
+  return best ?? { y: ground, water, onBridge: false }
 }
 
 /**
@@ -48,7 +72,7 @@ export const MAX_DROP = 3.0
  * the island, which is exactly what it used to do.
  */
 export function canStand(from, to, { allowWater = false } = {}) {
-  const s = sampleSurface(to.x, to.z)
+  const s = sampleSurface(to.x, to.z, from.y)
   if (s.water && !allowWater) return null
   const rise = s.y - from.y
   if (rise > MAX_STEP_UP) return null

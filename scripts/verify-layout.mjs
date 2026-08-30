@@ -54,7 +54,10 @@ for (const rb of RAMP_BEARINGS) {
   let prev = null
   for (let r = ISLAND_RADIUS - 20; r > 20; r -= MOVE_SUBSTEP) {
     const [x, z] = polar(r, rb)
-    const s = sampleSurface(x, z)
+    // Threaded through the walker's current height, as the controller does. Without it
+    // the query snaps onto whatever structure is highest overhead — the fountain's
+    // balcony, thirty metres up — rather than the ground being walked on.
+    const s = sampleSurface(x, z, prev?.y ?? null)
     if (prev && canStand(prev, { x, z }) === null) { ok = false; blockedAt = r; break }
     prev = { x, z, y: s.y }
   }
@@ -108,7 +111,7 @@ for (let i = 0; i < TIERS.length - 1; i++) {
     let climbed = true
     for (let r = edge + 14; r > edge - 14; r -= 0.5) {
       const [x, z] = polar(r, b)
-      const s = sampleSurface(x, z)
+      const s = sampleSurface(x, z, prev?.y ?? null)
       if (prev && canStand(prev, { x, z }) === null) { climbed = false; break }
       prev = { x, z, y: s.y }
     }
@@ -170,32 +173,31 @@ console.log('\n== You can walk where you want ==')
   ]
 
   const CELL = 3
-  const key = (i, j) => `${i},${j}`
-  const walkable = (x, z) => {
-    const s = sampleSurface(x, z)
-    return !s.water && !blocked(x, z, colliders, 0.45)
-  }
-
+  // Keyed by height band as well as position: the island is multi-level now — bridges,
+  // stair treads, the fountain's galleries — and a cell reachable at two heights has to
+  // be explored at both, or the first (lower) visit locks out the climb.
+  const LEVEL = 4
+  const key = (i, j, y) => `${i},${j},${Math.round(y / LEVEL)}`
   const [sx, sz] = polar(SPAWN.radius, SPAWN.bearing)
-  const start = [Math.round(sx / CELL), Math.round(sz / CELL)]
+  const startY = sampleSurface(sx, sz).y
+  const start = [Math.round(sx / CELL), Math.round(sz / CELL), startY]
   const seen = new Set([key(...start)])
   const queue = [start]
-  const heights = new Map()
+  const reached = [{ i: start[0], j: start[1], y: startY }]
 
   while (queue.length) {
-    const [i, j] = queue.pop()
+    const [i, j, y] = queue.pop()
     const x = i * CELL
     const z = j * CELL
-    const from = { x, z, y: sampleSurface(x, z).y }
+    const from = { x, z, y }
     for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const ni = i + di
       const nj = j + dj
-      const kk = key(ni, nj)
-      if (seen.has(kk)) continue
       const nx = ni * CELL
       const nz = nj * CELL
       if (Math.hypot(nx, nz) > ISLAND_RADIUS + 30) continue
-      if (!walkable(nx, nz)) continue
+      if (blocked(nx, nz, colliders, 0.45)) continue
+      if (sampleSurface(nx, nz, from.y).water) continue
       // Walk the gap in substeps, exactly as the controller does.
       let ok = true
       let cur = from
@@ -210,22 +212,22 @@ console.log('\n== You can walk where you want ==')
         cur = { x: px, z: pz, y: surf.y }
       }
       if (!ok) continue
+      const kk = key(ni, nj, cur.y)
+      if (seen.has(kk)) continue
       seen.add(kk)
-      heights.set(kk, cur.y)
-      queue.push([ni, nj])
+      reached.push({ i: ni, j: nj, y: cur.y })
+      queue.push([ni, nj, cur.y])
     }
   }
 
-  check('a large area is reachable on foot', seen.size > 4000, `${seen.size} cells (${(seen.size * CELL * CELL / 10000).toFixed(1)} ha)`)
+  const footprintCells = new Set(reached.map((c) => `${c.i},${c.j}`))
+  check('a large area is reachable on foot', footprintCells.size > 20000,
+    `${footprintCells.size} cells (${(footprintCells.size * CELL * CELL / 10000).toFixed(1)} ha)`)
 
   // Each landmark should have reachable ground near it.
   const near = (bearing, radius, tol = 26) => {
     const [lx, lz] = polar(radius, bearing)
-    for (const k of seen) {
-      const [i, j] = k.split(',').map(Number)
-      if (Math.hypot(i * CELL - lx, j * CELL - lz) < tol) return true
-    }
-    return false
+    return reached.some((c) => Math.hypot(c.i * CELL - lx, c.j * CELL - lz) < tol)
   }
   check('the summit plaza is reachable', near(0, 20, 40))
   check('the Market Plaza is reachable', near(LANDMARKS.marketPlaza.bearing, LANDMARKS.marketPlaza.radius))
@@ -235,15 +237,121 @@ console.log('\n== You can walk where you want ==')
     check(`Dock ${d.n} quay is reachable`, near(d.bearing, d.radius - 26, 30))
   }
 
-  const ys = [...heights.values()]
+  const ys = reached.map((c) => c.y)
   check('reachable ground spans every terrace',
     Math.max(...ys) - Math.min(...ys) > 80,
     `${Math.min(...ys).toFixed(0)} m to ${Math.max(...ys).toFixed(0)} m`)
+
+  // Not just "somewhere high" — the fountain's upper balcony has to be walkable to from
+  // the spawn point, which is the whole point of building a route up it.
+  const { FOUNTAIN: FN } = await import('../src/world/fountainNav.js')
+  const balconyY = FN.baseY + FN.gallery2.y
+  check('the fountain balcony is reachable from spawn',
+    reached.some((c) => Math.abs(c.y - balconyY) < 2),
+    `highest reached ${Math.max(...ys).toFixed(0)} m, balcony ${balconyY.toFixed(0)} m`)
 }
 
 // The hand-placed landmarks are meshes no generator knows about, so nothing would
 // notice if they had no collision — which for a long time they did not, and you could
 // walk straight through Galley-La HQ.
+// The route up the fountain is laid out in disjoint radial bands so a height field can
+// hold it; that only works if each band really is walkable end to end.
+console.log('\n== You can climb the Great Fountain ==')
+{
+  const { FOUNTAIN } = await import('../src/world/fountainNav.js')
+  const abs = (y) => FOUNTAIN.baseY + y
+
+  const walk = (radius, fromDeg, toDeg, label) => {
+    let prev = null
+    let ok = true
+    let stuck = null
+    const dir = Math.sign(toDeg - fromDeg)
+    for (let d = fromDeg; dir > 0 ? d <= toDeg : d >= toDeg; d += dir * 0.4) {
+      const [x, z] = polar(radius, (d + 360) % 360)
+      const s = sampleSurface(x, z, prev?.y ?? null)
+      if (prev && canStand(prev, { x, z }) === null) { ok = false; stuck = d; break }
+      prev = { x, z, y: s.y }
+    }
+    check(label, ok, ok ? `ends at ${prev.y.toFixed(1)} m` : `blocked at ${stuck?.toFixed(0)}deg`)
+    return prev
+  }
+
+  const midA = (FOUNTAIN.stairA.rIn + FOUNTAIN.stairA.rOut) / 2
+  const topA = walk(midA, 360, 300, 'stair A climbs from the plaza to gallery 1')
+  check('stair A reaches gallery 1', Math.abs((topA?.y ?? 0) - abs(FOUNTAIN.gallery1.y)) < 1.0)
+
+  const midB = (FOUNTAIN.stairB.rIn + FOUNTAIN.stairB.rOut) / 2
+  const topB = walk(midB, 300, 360, 'stair B climbs from gallery 1 to gallery 2')
+  check('stair B reaches the upper balcony', Math.abs((topB?.y ?? 0) - abs(FOUNTAIN.gallery2.y)) < 1.0)
+
+  // Both galleries must be walkable right round.
+  // Each gallery shares its band with the stair that feeds it, so its own stair's
+  // sector is skipped rather than a hard-coded one.
+  // A stair's sector includes its landing apron, which sits at the lower level.
+  const sector = (st) => {
+    const bounds = [st.bLo, st.bHi, ...(st.landing ?? [])]
+    return [Math.min(...bounds), Math.max(...bounds)]
+  }
+  for (const [name, g, skip] of [
+    ['cornice terrace', FOUNTAIN.gallery1, sector(FOUNTAIN.stairA)],
+    ['upper balcony', FOUNTAIN.gallery2, sector(FOUNTAIN.stairB)],
+  ]) {
+    const r = (g.rIn + g.rOut) / 2
+    let ok = true
+    for (let d = 0; d < 360; d += 2) {
+      if (skip && d >= skip[0] && d <= skip[1]) continue
+      const [x, z] = polar(r, d)
+      const s = sampleSurface(x, z, abs(g.y))
+      if (Math.abs(s.y - abs(g.y)) > 0.6) { ok = false; break }
+    }
+    check(`${name} is walkable round its ring`, ok)
+  }
+
+  // And standing underneath must not teleport you up onto the balcony.
+  {
+    const r = (FOUNTAIN.gallery2.rIn + FOUNTAIN.gallery2.rOut) / 2
+    const [x, z] = polar(r, 120)
+    const below = sampleSurface(x, z, FOUNTAIN.baseY)
+    check('you can stand beneath the upper balcony', below.y < FOUNTAIN.baseY + 3,
+      `surface under it is ${below.y.toFixed(0)} m, balcony is ${abs(FOUNTAIN.gallery2.y).toFixed(0)} m`)
+  }
+}
+
+// Two boxes whose footprints intersect render as one fused, glitched mass. The block
+// placement mostly avoids it, but the angular jitter and adjacent rings can still
+// collide, so it is asserted.
+console.log('\n== Nothing is fused into anything else ==')
+{
+  const { footprint, quadsOverlap } = await import('../src/world/overlap.js')
+  const buildings = generateCity()
+  const props = generateProps(buildings)
+  const quads = buildings.map((b) => footprint(b))
+
+  let pairs = 0
+  for (let i = 0; i < buildings.length; i++) {
+    for (let j = i + 1; j < buildings.length; j++) {
+      if (Math.hypot(buildings[i].x - buildings[j].x, buildings[i].z - buildings[j].z) > 34) continue
+      if (quadsOverlap(quads[i], quads[j])) pairs++
+    }
+  }
+  check('no two buildings overlap', pairs === 0, `${pairs} overlapping pairs of ${buildings.length}`)
+
+  let inside = 0
+  let counted = 0
+  for (const kind of ['crates', 'barrels', 'stallTops', 'lanternPosts', 'bollards']) {
+    for (const it of props[kind]) {
+      counted++
+      const [x, , z] = it.position
+      const q = [[x - 1, z - 1], [x + 1, z - 1], [x + 1, z + 1], [x - 1, z + 1]]
+      for (let i = 0; i < buildings.length; i++) {
+        if (Math.hypot(buildings[i].x - x, buildings[i].z - z) > 25) continue
+        if (quadsOverlap(q, quads[i])) { inside++; break }
+      }
+    }
+  }
+  check('no street prop sits inside a building', inside === 0, `${inside} of ${counted}`)
+}
+
 console.log('\n== The landmarks are solid ==')
 {
   const solid = landmarkColliders()

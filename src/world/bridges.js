@@ -9,7 +9,9 @@
 
 import { DEG, TIERS, RADIAL_CANALS, RING_CANALS, RAMP_BEARINGS, tierById } from './config.js'
 import { angDelta, bearingOf, heightAt as groundAt } from './terrain.js'
-import { ringRadiusAt, canalBearingAt } from './shape.js'
+import { ringRadiusAt, canalBearingAt, tierRangeAt } from './shape.js'
+import { RING_CANALS as RINGS } from './config.js'
+import { DOCK_BASIN } from './terrain.js'
 
 export const DECK_HALF_WIDTH = 3.8 // half the walkable width
 export const RISE = 1.9            // crown above the line joining the two abutments
@@ -28,9 +30,18 @@ function buildBridgeList() {
   for (const tier of TIERS) {
     if (tier.id === 4) continue
     for (const ch of RADIAL_CANALS.channels) {
-      for (const f of [0.34, 0.68]) {
+      for (const f of [0.18, 0.34, 0.45, 0.52, 0.60, 0.68, 0.86]) {
         const r = tier.inner + (tier.outer - tier.inner) * f
         if (r <= ch.inner) continue
+        // A bridge is useless where its own deck would land in other water or inside a
+        // dry dock. Skipping those silently used to leave the tier-0 quay ring severed
+        // at all eight radial canals, so the lower city could not be walked round.
+        if (r > DOCK_BASIN.innerR - 3 && r < DOCK_BASIN.outerR + 1) continue
+        const inRing = RINGS.some((rc) => {
+          const rr = ringRadiusAt(rc, ch.bearing)
+          return Math.abs(r - rr) < rc.halfWidth + 3
+        })
+        if (inRing) continue
         // Follow the canal's meander, so the bridge actually lands across the water.
         list.push({
           kind: 'radial', bearing: canalBearingAt(ch, r), radius: r,

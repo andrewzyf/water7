@@ -26,6 +26,7 @@ npm run perf     # frame rate at each graphics setting
 | scroll | zoom, from over the shoulder right out to the whole island |
 | `M` | top-down layout map |
 | `Q` | graphics quality — high / medium / low |
+| `N` | music on / off |
 
 ## What's here
 
@@ -41,8 +42,10 @@ while the sea drifts and the ring canals ease around. Twenty-five waterfalls pou
 the terrace steps, 14.5 m to 30 m each. The whole network drains from the Great Fountain
 at the summit to the sea, which is the thing the island is named for.
 
-**The landmarks.** The Great Fountain — an arcaded drum under four stacked basins with
-curtains falling between them and eight spouts aimed down the eight canals. Galley-La
+**The landmarks.** The Great Fountain — an arcaded drum, three stacked basins each
+pouring a full glassy curtain over its rim, and an ice-blue crystalline plume at the
+summit. Two flights of stairs and two ring galleries wind up the outside, so you can
+climb it and stand behind the falling water 129 m above the sea. Galley-La
 Docks 1–7, each entered through a real arched gate carrying its numeral, Dock 1 with a
 hull on the stocks. Galley-La HQ, merging both buildings the arc shows. Blue Station with
 the Puffing Tom standing at the platform and its trestle running out to the horizon.
@@ -88,6 +91,11 @@ scripts/         verify-layout.mjs · smoke.mjs · perf.mjs · screenshot.mjs
 
 `src/world/config.js` is the single source of truth for the geography. Change a radius
 or a bearing there and the terrain, water, buildings, docks, props and map all follow.
+
+## Music
+
+*Mother Sea* plays as background music, fading in on your first click (browsers block
+audio before a gesture). `N` toggles it, and the choice is remembered.
 
 ## Performance
 

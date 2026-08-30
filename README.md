@@ -30,11 +30,16 @@ npm run perf     # frame rate at each graphics setting
 
 ## What's here
 
-**The island.** A five-terrace stepped cone rising 96 m, irregular in outline, with
+**The island.** A five-terrace stepped cone rising 120 m, irregular in outline, with
 massive ashlar retaining walls broken by four ramps dressed as stepped civic streets.
 Roughly 500 buildings of 3–6 storeys, each with recessed windows, shutters, a stone
 plinth, a cornice, a door and chimneys — under the half-barrel terracotta vaults, banded
 gable arches facing the street, that make a Water 7 skyline recognisable.
+
+**The sky.** A gradient dome with procedural cumulus drifting overhead. A physical sky
+model bleached its horizon into a white band that swallowed the sea, and could not give
+us clouds — and a deep blue sky stacked with white cumulus is as much a part of how
+Water 7 looks as the terracotta roofs are.
 
 **Water, flowing.** One shader drives the sea, the canals and the fountain pools, with a
 per-vertex flow direction so the eight radial canals visibly run outward and downward

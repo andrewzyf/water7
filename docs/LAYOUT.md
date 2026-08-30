@@ -22,14 +22,15 @@ of the references:
 | | value |
 |---|---|
 | Island radius (shoreline) | **400 m** |
-| Summit height | **96 m** |
-| Great Fountain spire tip | **~176 m** |
+| Summit height | **120 m** |
+| Great Fountain plume tip | **~260 m** |
 | Sea plane | y = 0 |
 | Walk / run speed | 3.6 / 7.6 m·s⁻¹ |
 | Rim-to-summit on foot | ≈ 2 min |
 
-Height-to-radius ratio ≈ 1:4.2. The first pass used 1:6.5 and read as a pancake from
-the sea; 1:4.2 matches the stepped-cone profile in `Water_7_Infobox` and `hq720`.
+Height-to-radius ratio ≈ **1:3.3**. The first pass used 1:6.5 and read as a pancake from
+the sea; 1:4.2 was better but still flat at distance. 1:3.3 gives the stepped cone of
+`Water_7_Infobox` and `hq720` real presence on the horizon.
 
 ## Terraces
 
@@ -38,10 +39,10 @@ level**, 3.5 m below its street surface — the Venetian stone-walled canal look
 
 | Tier | Name | Radii (m) | Street y | Canal water y |
 |---|---|---|---|---|
-| 4 | Summit — Great Fountain plaza | 0 – 60 | 96 | 92.5 |
-| 3 | Upper city | 60 – 130 | 66 | 62.5 |
-| 2 | Civic terrace — **Galley-La HQ** | 130 – 215 | 40 | 36.5 |
-| 1 | Main canal residential district | 215 – 310 | 18 | 14.5 |
+| 4 | Summit — Great Fountain plaza | 0 – 60 | 120 | 116.5 |
+| 3 | Upper city | 60 – 130 | 84 | 80.5 |
+| 2 | Civic terrace — **Galley-La HQ** | 130 – 215 | 52 | 48.5 |
+| 1 | Main canal residential district | 215 – 310 | 24 | 20.5 |
 | 0 | Lower city + **dock ring** | 310 – 400 | 3 | 0 (sea) |
 | — | Sea | 400 + | 0 | 0 |
 

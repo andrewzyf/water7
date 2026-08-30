@@ -99,6 +99,16 @@ function buildCurtains(specs, segments = 72) {
   return g
 }
 
+/** The flat apron at the foot of a stair, level with the walk it leaves from. */
+function landingApron(stair, band) {
+  const [lo, hi] = stair.landing
+  const g = new THREE.RingGeometry(band.rIn, band.rOut, 14, 1, lo * DEG, (hi - lo) * DEG)
+  g.rotateX(-Math.PI / 2)
+  g.scale(1, 1, -1) // RingGeometry sweeps the opposite way round in world XZ
+  g.translate(0, stair.yLo, 0)
+  return g
+}
+
 /** Flat disc of water sitting in a basin. */
 function poolGeometry(radius, y, segments = 48) {
   const pos = [0, y, 0]
@@ -208,12 +218,12 @@ export default function GreatFountain() {
     return mergeSimple(parts)
   }, [F])
 
-  /** The cornice terrace floor. */
+  /** The cornice terrace floor, plus the apron at the foot of stair A. */
   const terrace = useMemo(() => {
     const floor = new THREE.RingGeometry(F.gallery1.rIn, F.gallery1.rOut + 0.8, 56)
     floor.rotateX(-Math.PI / 2)
     floor.translate(0, F.gallery1.y, 0)
-    return floor
+    return mergeSimple([floor, landingApron(F.stairA, F.gallery1)])
   }, [F])
 
   /** Columns carrying the upper balcony, and its floor. */
@@ -235,16 +245,7 @@ export default function GreatFountain() {
     floor.translate(0, F.gallery2.y, 0)
     parts.push(floor)
 
-    // The apron at the foot of stair B, level with the terrace below.
-    const [lo, hi] = F.stairB.landing
-    const apron = new THREE.RingGeometry(
-      F.gallery2.rIn, F.gallery2.rOut, 12, 1,
-      lo * DEG, (hi - lo) * DEG,
-    )
-    apron.rotateX(-Math.PI / 2)
-    apron.scale(1, 1, -1) // RingGeometry sweeps the opposite way in world XZ
-    apron.translate(0, F.stairB.yLo, 0)
-    parts.push(apron)
+    parts.push(landingApron(F.stairB, F.gallery2))
     return mergeSimple(parts)
   }, [F])
 
@@ -283,8 +284,14 @@ export default function GreatFountain() {
       }
     }
     // Gallery 1's outer edge, opened where stair A arrives.
-    ring(F.gallery1.rOut, F.gallery1.y, [F.stairA.bHi - 6, F.stairA.bLo + 6])
-    ring(F.gallery2.rOut, F.gallery2.y, [F.stairB.landing[0] - 6, F.stairB.bHi + 6])
+    // A gap wherever a stair or its landing occupies the band, so the rail does not
+    // fence off the way up.
+    const gap = (st) => {
+      const b = [st.bLo, st.bHi, ...(st.landing ?? [])]
+      return [Math.min(...b) - 5, Math.max(...b) + 5]
+    }
+    ring(F.gallery1.rOut, F.gallery1.y, gap(F.stairA))
+    ring(F.gallery2.rOut, F.gallery2.y, gap(F.stairB))
     for (const stair of [F.stairA, F.stairB]) {
       for (const s of stairSamples(stair, 26)) {
         const a = s.bearing * DEG

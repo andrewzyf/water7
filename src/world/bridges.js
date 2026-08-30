@@ -79,12 +79,18 @@ function buildBridgeList() {
   // Sampling both ends and interpolating between them is what keeps every deck flush
   // with the street it meets, which is the difference between a walkable route up the
   // island and a 1 m lip the player cannot step over.
+  const landed = []
   for (const br of list) {
     const [a, b] = abutments(br)
     br.yA = a
     br.yB = b
+    // A bridge perched on a terrace slope has abutments well below its street, so its
+    // deck floats several metres over the ground at one end. Drop those rather than
+    // leave a walkway hanging in the air.
+    if (Math.abs(a - br.y) > 4 || Math.abs(b - br.y) > 4) continue
+    landed.push(br)
   }
-  return list
+  return landed
 }
 
 /** Ground height just beyond each end of a bridge deck. */

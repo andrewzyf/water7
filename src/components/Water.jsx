@@ -30,8 +30,8 @@ export default function Water({ sunDirection }) {
     rippleScale: 0.022,
     foam: 0.55,
     opacity: 0.94,
-    shallow: '#2d8fae',
-    deep: '#0e4463',
+    shallow: '#3aa3c0',
+    deep: '#0b3a56',
   }), [])
 
   const mats = useRef([canalMat, seaMat])

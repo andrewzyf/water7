@@ -38,7 +38,16 @@ export const FOUNTAIN = {
   gallery2: { rIn: 27, rOut: 31, y: 27 },
 
   /** Plaza up to the cornice terrace. */
-  stairA: { rIn: 22.5, rOut: 27, yLo: 0, yHi: 15, bLo: 172, bHi: 112 },
+  /**
+   * The landing apron matters as much here as on stair B: without it the only way onto
+   * the terrace band from the plaza is the single bearing where the ramp happens to be
+   * level with it.
+   *
+   * Sector 21deg-81deg is chosen because it sits a clear 16deg from the nearest island
+   * ramp on either side, and the summit plaza there stays flat out past 50 m — so the
+   * apron rests on level ground rather than on a terrace slope.
+   */
+  stairA: { rIn: 22.5, rOut: 27, yLo: 0, yHi: 15, bLo: 33, bHi: 81, landing: [21, 33] },
   /**
    * Cornice terrace up to the balcony, in the sector the balcony leaves free.
    *
@@ -85,8 +94,10 @@ export function fountainHeightAt(x, z) {
 
   const base = FOUNTAIN.baseY
 
-  // Inner band: the cornice terrace, or stair A in the sector it leaves free.
+  // Inner band: the cornice terrace, stair A, or the apron at its foot.
   if (r >= gallery1.rIn && r <= gallery1.rOut) {
+    const [aLo, aHi] = stairA.landing
+    if (bearing >= aLo && bearing <= aHi) return base + stairA.yLo
     const t = stairT(stairA, bearing)
     if (t !== null) return base + stairA.yLo + (stairA.yHi - stairA.yLo) * t
     return base + gallery1.y

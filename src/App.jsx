@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Sky, AdaptiveDpr, Preload } from '@react-three/drei'
+import { AdaptiveDpr, Preload } from '@react-three/drei'
 import { EffectComposer, Bloom, SMAA, Vignette, BrightnessContrast, HueSaturation } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
@@ -9,6 +9,7 @@ import { generateProps } from './world/props.js'
 import { landmarkColliders, propColliders } from './world/colliders.js'
 import './world/debugCamera.js'
 import { SKY } from './world/palette.js'
+import SkyDome from './components/SkyDome.jsx'
 import Island from './components/Island.jsx'
 import Water from './components/Water.jsx'
 import Waterfalls from './components/Waterfalls.jsx'
@@ -165,19 +166,12 @@ export default function App() {
         gl={{ antialias: false, powerPreference: 'high-performance' }}
         onCreated={({ gl, scene }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping
-          gl.toneMappingExposure = 1.06
+          gl.toneMappingExposure = 1.0
           // Light haze only — Water 7 is almost always shown in clear afternoon air.
           scene.fog = new THREE.FogExp2(SKY.fog, 0.000115)
         }}
       >
-        <Sky
-          distance={4500}
-          sunPosition={[SUN.x, SUN.y * 0.62, SUN.z]}
-          turbidity={5}
-          rayleigh={1.4}
-          mieCoefficient={0.006}
-          mieDirectionalG={0.83}
-        />
+        <SkyDome sunDirection={SUN_DIR} />
         <Lighting quality={quality} />
 
         <Island />
@@ -215,7 +209,7 @@ export default function App() {
           <EffectComposer multisampling={0} disableNormalPass>
             {quality.post === 'full' ? <SMAA /> : <></>}
             {/* Just enough bloom for sun glitter on the water and the falls to lift. */}
-            <Bloom intensity={0.42} luminanceThreshold={0.72} luminanceSmoothing={0.28} mipmapBlur />
+            <Bloom intensity={0.34} luminanceThreshold={0.82} luminanceSmoothing={0.25} mipmapBlur />
             {quality.post === 'full' ? <HueSaturation saturation={0.06} /> : <></>}
             {quality.post === 'full'
               ? <BrightnessContrast brightness={0.005} contrast={0.055} />

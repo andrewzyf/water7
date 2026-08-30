@@ -33,7 +33,7 @@ export const inwardYaw = (bearingDeg) => -(bearingDeg + 90) * DEG
 
 export const SEA_LEVEL = 0
 export const ISLAND_RADIUS = 400
-export const SUMMIT_HEIGHT = 96
+export const SUMMIT_HEIGHT = 120
 
 /**
  * Terraces, summit-first. `outer` is the radius at which the terrace ends and the
@@ -41,10 +41,10 @@ export const SUMMIT_HEIGHT = 96
  * water level, 3.5 m below its street.
  */
 export const TIERS = [
-  { id: 4, name: 'Summit — Great Fountain Plaza', inner: 0, outer: 60, y: 96 },
-  { id: 3, name: 'Upper City', inner: 60, outer: 130, y: 66 },
-  { id: 2, name: 'Civic Terrace', inner: 130, outer: 215, y: 40 },
-  { id: 1, name: 'Canal District', inner: 215, outer: 310, y: 18 },
+  { id: 4, name: 'Summit — Great Fountain Plaza', inner: 0, outer: 60, y: 120 },
+  { id: 3, name: 'Upper City', inner: 60, outer: 130, y: 84 },
+  { id: 2, name: 'Civic Terrace', inner: 130, outer: 215, y: 52 },
+  { id: 1, name: 'Canal District', inner: 215, outer: 310, y: 24 },
   { id: 0, name: 'Lower City & Dock Ring', inner: 310, outer: 400, y: 3 },
 ]
 
@@ -62,7 +62,7 @@ export const TERRACE_BLEND = 7
  */
 export const RAMP_BEARINGS = [5, 97.5, 186.5, 275]
 export const RAMP_HALF_WIDTH = 11 // degrees of arc — stays clear of the canals
-export const RAMP_BLEND = 56      // metres of run — keeps every ramp under 30deg
+export const RAMP_BLEND = 70      // metres of run — keeps every ramp under 28deg
 
 /**
  * The radial canals cascading toward the sea.

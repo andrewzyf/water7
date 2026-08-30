@@ -185,9 +185,8 @@ why the script exists.
 
 Still open, in rough order of value:
 
-- **Yagara Bulls.** The canal traffic is boats without their seahorse teams. This is the
-  most conspicuous missing piece of Water 7's character.
-- **Ambient life.** No pedestrians, birds or audio. The city is built but empty.
+- **Ambient life.** No pedestrians, birds or audio. The city is built but empty apart
+  from its canal traffic.
 - **Aqua Laguna.** The flood line is encoded in the geography (tier 0 sits 3 m above the
   sea) but the storm itself is not implemented.
 - **Interiors.** Every door and window is exterior dressing; nothing opens.

@@ -18,12 +18,13 @@ npm run perf     # frame rate at each graphics setting
 
 | | |
 |---|---|
-| `W` `A` `S` `D` | walk — or throttle and steer, in the boat |
+| `W` `A` `S` `D` | walk — or throttle and steer, on the water |
 | `Shift` | run |
-| `E` | board a boat when near water · step ashore when in one |
-| click | capture the mouse to look around (`Esc` releases) |
+| `Space` | jump |
+| `E` | ride a Yagara Bull or take a boat when near water · dismount when aboard |
+| drag, or click | look around — dragging always works; clicking captures the mouse (`Esc` releases) |
+| scroll | zoom, from over the shoulder right out to the whole island |
 | `M` | top-down layout map |
-| `L` | landmark labels |
 | `Q` | graphics quality — high / medium / low |
 
 ## What's here
@@ -47,8 +48,10 @@ hull on the stocks. Galley-La HQ, merging both buildings the arc shows. Blue Sta
 the Puffing Tom standing at the platform and its trestle running out to the horizon.
 Franky House on its spit, robot arms and all, and Scrap Island beyond.
 
-**Street life.** Quayside lamps and bollards, market awnings, crates and barrels around
-the yards, laundry strung across the alleys, and boats moored along every canal.
+**Street life.** Fifty-four Yagara Bull teams tow gondolas around the ring canals, and
+you can climb onto one and ride it. Quayside lamps and bollards, market awnings, crates
+and barrels around the yards, laundry strung across the alleys, and boats moored along
+every canal.
 
 ## How it is put together
 
@@ -58,12 +61,21 @@ engine, and the legality test for procedural building and prop placement — so 
 cannot disagree with each other.
 
 Navigation is emergent from it: a move is legal if the destination is not water, not
-inside a building, and not too steep a rise. Terrace walls fail that slope test at
-65–77°; the ramps pass it at 15–28°. There is no hand-placed invisible geometry. The
-terrain material blends paving to stonework by the same slope threshold, so **the island
-looks the way it behaves**.
+inside anything solid, and not too steep a rise. Terrace walls fail that slope test at
+65–77°; the ramps pass it at 15–28°, and their stair treads come from the same shared
+definition the renderer draws, so the step you see is the step you stand on. The terrain
+material blends paving to stonework by that same slope threshold, so **the island looks
+the way it behaves**.
 
-Because navigability is emergent, it is verified rather than assumed — `npm run verify`.
+Two rules keep it feeling right: a move is tested **where it lands**, not some fixed
+distance ahead of it, and it is split into substeps of 0.25 m so the slope limit means
+the same thing at any frame rate. Probing further ahead than the step being taken puts
+an invisible wall in front of every slope and ledge on the island.
+
+Because navigability is emergent, it is verified rather than assumed. `npm run verify`
+flood-fills the island with the walker's own rules from the spawn point and checks that
+26+ hectares are reachable, that the summit and every dock quay can be reached on foot,
+and that the landmarks are solid.
 
 ```
 src/world/       config · height field · canal shape · bridges · navigation ·

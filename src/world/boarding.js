@@ -8,6 +8,7 @@
  */
 import { isWaterAt } from './terrain.js'
 import { sampleSurface, canStand } from './nav.js'
+import { nearestTeam } from './trafficState.js'
 
 const RINGS = 16
 const SPOKES = 24
@@ -67,4 +68,26 @@ export function findLandingSpot(from, maxRadius = 18) {
     if (!canStand({ x: from.x, z: from.z, y: s.y }, { x, z })) return null
     return { x, z, y: s.y }
   })
+}
+
+/**
+ * The nearest Yagara Bull you could climb onto.
+ *
+ * Yagara are Water 7's canal traffic, and riding one is the most characteristic way to
+ * get about the city — so mounting takes priority over taking a boat when both are in
+ * reach.
+ */
+export function findRideableYagara(from, maxRadius = 22) {
+  const team = nearestTeam(from.x, from.z, maxRadius)
+  if (!team) return null
+  if (!isWaterAt(team.x, team.z)) return null
+  // Point along the channel, as with a boat: across it means an immediate stall.
+  let heading = 0
+  let best = -1
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2
+    const reach = waterReach(team.x, team.z, a)
+    if (reach > best) { best = reach; heading = a }
+  }
+  return { x: team.x, z: team.z, heading, teamIndex: team.index }
 }

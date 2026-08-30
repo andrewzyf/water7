@@ -5,6 +5,8 @@ import { EffectComposer, Bloom, SMAA, Vignette, BrightnessContrast, HueSaturatio
 import * as THREE from 'three'
 
 import { generateCity, buildColliders } from './world/city.js'
+import { generateProps } from './world/props.js'
+import { landmarkColliders, propColliders } from './world/colliders.js'
 import './world/debugCamera.js'
 import { SKY } from './world/palette.js'
 import Island from './components/Island.jsx'
@@ -23,9 +25,9 @@ import BlueStation from './components/landmarks/BlueStation.jsx'
 import Outskirts from './components/landmarks/Outskirts.jsx'
 import Player from './components/Player.jsx'
 import PlayerBoat from './components/PlayerBoat.jsx'
-import { findBoardingSpot, findLandingSpot } from './world/boarding.js'
+import { findBoardingSpot, findLandingSpot, findRideableYagara } from './world/boarding.js'
+import { trafficState } from './world/trafficState.js'
 import Hud from './components/ui/Hud.jsx'
-import Labels from './components/ui/Labels.jsx'
 import MapView from './components/ui/MapView.jsx'
 
 /**
@@ -82,7 +84,6 @@ function Lighting({ quality }) {
 
 export default function App() {
   const playerState = useRef(null)
-  const [showLabels, setShowLabels] = useState(true)
   const [showMap, setShowMap] = useState(false)
   const [mode, setMode] = useState('foot')
   const [qualityName, setQualityName] = useState(() => {
@@ -90,10 +91,17 @@ export default function App() {
   })
   const quality = QUALITY[qualityName] ?? QUALITY.high
   const [boatSpawn, setBoatSpawn] = useState(null)
+  const [vehicle, setVehicle] = useState('boat')
   const [footSpawn, setFootSpawn] = useState(null)
 
   const buildings = useMemo(() => generateCity(), [])
-  const colliders = useMemo(() => buildColliders(buildings), [buildings])
+  const props = useMemo(() => generateProps(buildings), [buildings])
+  // Everything solid in one list: the procedural city, the hand-placed landmarks, and
+  // the market stalls. The landmarks used to have no collision at all.
+  const colliders = useMemo(
+    () => [...buildColliders(buildings), ...landmarkColliders(), ...propColliders(props)],
+    [buildings, props],
+  )
 
   // Expose live player state for the screenshot harness and for debugging from the
   // console; reading the HUD is unreliable because it samples on a timer.
@@ -108,7 +116,6 @@ export default function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.code === 'KeyM') setShowMap((v) => !v)
-      if (e.code === 'KeyL') setShowLabels((v) => !v)
       if (e.code === 'KeyQ') {
         setQualityName((q) => {
           const next = QUALITY_ORDER[(QUALITY_ORDER.indexOf(q) + 1) % QUALITY_ORDER.length]
@@ -121,17 +128,32 @@ export default function App() {
         if (!p) return
         // One key does both, because which one you mean is never ambiguous.
         if (mode === 'foot') {
+          // A Yagara within reach wins over a boat: riding one is the local way to get
+          // about, and if you walked up to a bull that is plainly what you meant.
+          const bull = findRideableYagara(p)
+          if (bull) {
+            trafficState.hidden.add(bull.teamIndex)
+            setBoatSpawn(bull)
+            setVehicle('yagara')
+            setMode('boat')
+            return
+          }
           const spot = findBoardingSpot(p)
-          if (spot) { setBoatSpawn(spot); setMode('boat') }
+          if (spot) { setBoatSpawn(spot); setVehicle('boat'); setMode('boat') }
         } else {
-          const spot = findLandingSpot(p)
-          if (spot) { setFootSpawn(spot); setMode('foot') }
+          const spot = findLandingSpot(p, 34)
+          if (spot) {
+            // Hand the bull back to its round once the player steps off.
+            if (boatSpawn?.teamIndex !== undefined) trafficState.hidden.delete(boatSpawn.teamIndex)
+            setFootSpawn(spot)
+            setMode('foot')
+          }
         }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [mode])
+  }, [mode, boatSpawn])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -162,7 +184,7 @@ export default function App() {
         <City buildings={buildings} />
         <CanalEdges />
         <Ramps />
-        <Props buildings={buildings} />
+        <Props props={props} />
         <CanalTraffic />
         <GreatFountain />
         <Docks />
@@ -182,8 +204,8 @@ export default function App() {
           active={mode === 'boat'}
           spawn={boatSpawn}
           playerState={playerState}
+          kind={vehicle}
         />
-        {showLabels && <Labels />}
 
         <AdaptiveDpr pixelated />
         <Preload all />
@@ -202,13 +224,7 @@ export default function App() {
         )}
       </Canvas>
 
-      <Hud
-        playerState={playerState}
-        showLabels={showLabels}
-        showMap={showMap}
-        mode={mode}
-        quality={qualityName}
-      />
+      <Hud playerState={playerState} showMap={showMap} mode={mode} quality={qualityName} />
       <MapView playerState={playerState} buildings={buildings} visible={showMap} />
     </div>
   )

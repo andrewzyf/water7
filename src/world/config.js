@@ -98,9 +98,18 @@ export const RING_CANALS = [
   { tier: 0, radius: 374, halfWidth: 10 },
 ]
 
+/**
+ * The Great Fountain.
+ *
+ * `basinRadius` is the widest basin, not the monument's footprint — the arcaded drum
+ * beneath it is wider, and the plaza has to stay walkable around all of it. When the
+ * basin filled the whole summit there was no plaza left and the summit was unreachable
+ * on foot.
+ */
 export const GREAT_FOUNTAIN = {
-  basinRadius: 52,
-  spireHeight: 74, // above the summit plaza; tip lands near 200 m absolute
+  basinRadius: 30,
+  drumRadius: 34,   // the arcade at the base; nothing solid extends past this
+  spireHeight: 96,  // above the summit plaza, putting the tip near 215 m absolute
 }
 
 /**

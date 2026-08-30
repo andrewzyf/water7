@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import Batch from './Batch.jsx'
-import { generateProps } from '../world/props.js'
 import { boatGeometry } from '../world/boatGeometry.js'
 import { mergeSimple } from '../world/arch.js'
 import { timberTexture, ashlarTexture } from '../world/textures.js'
@@ -33,8 +32,7 @@ function lineGeometry(lines) {
  * Everything at eye level: quayside lamps and bollards, market awnings, crates and
  * barrels around the yards, laundry across the alleys, and boats moored in the canals.
  */
-export default function Props({ buildings }) {
-  const props = useMemo(() => generateProps(buildings), [buildings])
+export default function Props({ props }) {
 
   const geos = useMemo(() => ({
     box: new THREE.BoxGeometry(1, 1, 1),
@@ -57,7 +55,7 @@ export default function Props({ buildings }) {
   // Awnings over some of the moored boats.
   const boatAwnings = useMemo(
     () => props.boats.filter((b) => b.awning).map((b) => ({
-      position: [b.position[0], b.position[1] + 1.7, b.position[2]],
+      position: [b.position[0], b.position[1] + 1.15, b.position[2]],
       rotation: b.rotation,
       scale: [2.0 * b.scale, 0.16, 3.4 * b.scale],
       color: b.awning,

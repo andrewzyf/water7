@@ -7,6 +7,7 @@ import { isWaterAt } from '../world/terrain.js'
 import { boatGeometry } from '../world/boatGeometry.js'
 import { yagaraBodyGeometry, yagaraHeadGeometry, yagaraTrimGeometry } from '../world/yagaraGeometry.js'
 import { makeRng, rand, pick } from '../world/rng.js'
+import { trafficState } from '../world/trafficState.js'
 import { timberTexture } from '../world/textures.js'
 
 /**
@@ -105,8 +106,16 @@ export default function CanalTraffic() {
       const bobBoat = Math.sin(t * 1.3 + it.bob) * 0.09
       const bobBull = Math.sin(t * 1.6 + it.bob * 1.7) * 0.13
 
-      // A team whose lane has wandered onto dry ground is hidden rather than beached.
-      const wet = isWaterAt(x, z) && isWaterAt(bx, bz)
+      // A team whose lane has wandered onto dry ground is hidden rather than beached —
+      // and so is one the player has mounted, since they are driving it themselves now.
+      const wet = isWaterAt(x, z) && isWaterAt(bx, bz) && !trafficState.hidden.has(i)
+
+      // Publish for the boarding search.
+      const slot = trafficState.teams[i] ?? (trafficState.teams[i] = { x: 0, z: 0, y: 0, tier: 0 })
+      slot.x = bx
+      slot.z = bz
+      slot.y = it.y
+      slot.tier = it.rc.tier
 
       const place = (mesh, px, py, pz, yaw, s, roll = 0) => {
         if (!mesh.current) return

@@ -37,7 +37,10 @@ await page.waitForTimeout(9000)
 const at = () => page.evaluate(() => {
   const s = window.__w7?.player?.()
   if (!s) return null
-  return { x: s.x, z: s.z, mode: window.__w7.mode(), speed: s.speed ?? null }
+  return {
+    x: s.x, z: s.z, mode: window.__w7.mode(), speed: s.speed ?? null,
+    airborne: !!s.airborne, zoom: s.zoom ?? null, riding: !!s.riding,
+  }
 })
 
 /**
@@ -81,6 +84,24 @@ console.log('\n== Stepping ashore ==')
 await page.keyboard.press('KeyE')
 const ashore = await waitFor('ashore', (s) => s.mode === 'foot' && s.speed === null)
 check('E puts the player back on foot', ashore?.mode === 'foot')
+
+console.log('\n== Jump and zoom ==')
+{
+  const before = await at()
+  await page.keyboard.press('Space')
+  // Catch the airborne frame: at software frame rates the whole arc can pass between
+  // two polls, so watch for the flag rather than sampling once.
+  const jumped = await waitFor('airborne', (s) => s.airborne === true, 12000)
+  check('Space leaves the ground', jumped?.airborne === true)
+  await page.waitForTimeout(2500)
+
+  const z0 = (await at())?.zoom
+  await page.mouse.move(500, 400)
+  for (let i = 0; i < 6; i++) await page.mouse.wheel(0, 260)
+  const z1 = await waitFor('zoomed', (s) => (s.zoom ?? 0) > (z0 ?? 0) + 1, 12000)
+  check('scrolling zooms the camera out', (z1?.zoom ?? 0) > (z0 ?? 0), `${z0?.toFixed(1)} -> ${z1?.zoom?.toFixed(1)}`)
+  before // keep the reading meaningful in failure output
+}
 
 console.log('\n== Overlays ==')
 await page.keyboard.press('KeyM')

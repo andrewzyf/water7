@@ -26,7 +26,7 @@ const key = {
   textAlign: 'center',
 }
 
-export default function Hud({ playerState, showLabels, showMap, mode, quality }) {
+export default function Hud({ playerState, showMap, mode, quality }) {
   const [info, setInfo] = useState(null)
 
   useEffect(() => {
@@ -40,6 +40,7 @@ export default function Hud({ playerState, showLabels, showMap, mode, quality })
         running: p.running,
         onBridge: p.onBridge,
         speed: p.speed,
+        riding: p.riding,
       })
     }, 140)
     return () => clearInterval(id)
@@ -57,7 +58,7 @@ export default function Hud({ playerState, showLabels, showMap, mode, quality })
         </div>
         <div style={{ opacity: 0.6, fontSize: 11.5 }}>
           {mode === 'boat'
-            ? `under way · ${Math.abs(info?.speed ?? 0).toFixed(1)} m/s`
+            ? `${info?.riding ? 'riding a Yagara' : 'under way'} · ${Math.abs(info?.speed ?? 0).toFixed(1)} m/s`
             : `elevation ${info ? info.alt.toFixed(1) : '0.0'} m`}
         </div>
       </div>
@@ -73,13 +74,14 @@ export default function Hud({ playerState, showLabels, showMap, mode, quality })
           <>
             <span style={key}>W</span><span style={key}>A</span><span style={key}>S</span><span style={key}>D</span> walk
             &nbsp;·&nbsp; <span style={key}>Shift</span> run
-            &nbsp;·&nbsp; <b>click</b> to look around
+            &nbsp;·&nbsp; <span style={key}>Space</span> jump
+            &nbsp;·&nbsp; <b>drag</b> or click to look
+            &nbsp;·&nbsp; <b>scroll</b> to zoom
           </>
         )}
         <br />
-        <span style={key}>E</span> {mode === 'boat' ? 'step ashore' : 'board a boat (near water)'}
+        <span style={key}>E</span> {mode === 'boat' ? 'dismount' : 'ride a Yagara or take a boat (near water)'}
         &nbsp;·&nbsp; <span style={key}>M</span> map
-        &nbsp;·&nbsp; <span style={key}>L</span> labels {showLabels ? 'on' : 'off'}
         &nbsp;·&nbsp; <span style={key}>Q</span> graphics: <b>{quality}</b>
         &nbsp;·&nbsp; <span style={key}>Esc</span> cursor
       </div>

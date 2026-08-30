@@ -9,13 +9,17 @@
  */
 import {
   DOCKS, RADIAL_CANALS, RAMP_BEARINGS, RAMP_HALF_WIDTH, TIERS, DEG, polar,
-  RING_CANALS, ISLAND_RADIUS,
+  RING_CANALS, ISLAND_RADIUS, SPAWN, LANDMARKS,
 } from '../src/world/config.js'
 import { canalBearingAt, ringRadiusAt, terraceOuterAt } from '../src/world/shape.js'
 import { angDelta, dockMask, canalMask, heightAt } from '../src/world/terrain.js'
 import { DOCK_BASIN } from '../src/world/terrain.js'
 import { BRIDGES } from '../src/world/bridges.js'
 import { buildCanals, buildSea, meanNormalY } from '../src/world/water/canalGeometry.js'
+import { generateCity, buildColliders } from '../src/world/city.js'
+import { generateProps } from '../src/world/props.js'
+import { landmarkColliders, propColliders, blocked } from '../src/world/colliders.js'
+import { MOVE_SUBSTEP } from '../src/world/nav.js'
 import { sampleSurface, canStand } from '../src/world/nav.js'
 
 let failures = 0
@@ -41,12 +45,14 @@ for (const rb of RAMP_BEARINGS) {
     worst === Infinity ? '' : `canal crosses at r=${worst.toFixed(0)}`)
 }
 
+// Walked at the mover's own substep. Sampling coarser than that skips whole stair
+// treads and reports two risers as one impossible step.
 console.log('\n== Every ramp is actually climbable end to end ==')
 for (const rb of RAMP_BEARINGS) {
   let ok = true
   let blockedAt = null
   let prev = null
-  for (let r = ISLAND_RADIUS - 20; r > 20; r -= 0.5) {
+  for (let r = ISLAND_RADIUS - 20; r > 20; r -= MOVE_SUBSTEP) {
     const [x, z] = polar(r, rb)
     const s = sampleSurface(x, z)
     if (prev && canStand(prev, { x, z }) === null) { ok = false; blockedAt = r; break }
@@ -143,6 +149,124 @@ console.log('\n== Spawn point is on dry, standable ground ==')
   const [x, z] = polar(SPAWN.radius, SPAWN.bearing)
   const s = sampleSurface(x, z)
   check('spawn is dry land', !s.water, `y=${s.y.toFixed(1)}`)
+}
+
+/**
+ * Reachability.
+ *
+ * The single most important property of an exploration game is that you can get to the
+ * places in it, and that is emergent here rather than authored: it falls out of the
+ * slope limit, the water test and the collider set. So it is flood-filled with the
+ * mover's own rules, from the spawn point, and checked against the landmarks.
+ */
+console.log('\n== You can walk where you want ==')
+{
+  const buildings = generateCity()
+  const props = generateProps(buildings)
+  const colliders = [
+    ...buildColliders(buildings),
+    ...landmarkColliders(),
+    ...propColliders(props),
+  ]
+
+  const CELL = 3
+  const key = (i, j) => `${i},${j}`
+  const walkable = (x, z) => {
+    const s = sampleSurface(x, z)
+    return !s.water && !blocked(x, z, colliders, 0.45)
+  }
+
+  const [sx, sz] = polar(SPAWN.radius, SPAWN.bearing)
+  const start = [Math.round(sx / CELL), Math.round(sz / CELL)]
+  const seen = new Set([key(...start)])
+  const queue = [start]
+  const heights = new Map()
+
+  while (queue.length) {
+    const [i, j] = queue.pop()
+    const x = i * CELL
+    const z = j * CELL
+    const from = { x, z, y: sampleSurface(x, z).y }
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ni = i + di
+      const nj = j + dj
+      const kk = key(ni, nj)
+      if (seen.has(kk)) continue
+      const nx = ni * CELL
+      const nz = nj * CELL
+      if (Math.hypot(nx, nz) > ISLAND_RADIUS + 30) continue
+      if (!walkable(nx, nz)) continue
+      // Walk the gap in substeps, exactly as the controller does.
+      let ok = true
+      let cur = from
+      const steps = Math.ceil(CELL / MOVE_SUBSTEP)
+      for (let s = 1; s <= steps; s++) {
+        const t = s / steps
+        const px = x + (nx - x) * t
+        const pz = z + (nz - z) * t
+        if (blocked(px, pz, colliders, 0.45)) { ok = false; break }
+        const surf = canStand(cur, { x: px, z: pz })
+        if (!surf) { ok = false; break }
+        cur = { x: px, z: pz, y: surf.y }
+      }
+      if (!ok) continue
+      seen.add(kk)
+      heights.set(kk, cur.y)
+      queue.push([ni, nj])
+    }
+  }
+
+  check('a large area is reachable on foot', seen.size > 4000, `${seen.size} cells (${(seen.size * CELL * CELL / 10000).toFixed(1)} ha)`)
+
+  // Each landmark should have reachable ground near it.
+  const near = (bearing, radius, tol = 26) => {
+    const [lx, lz] = polar(radius, bearing)
+    for (const k of seen) {
+      const [i, j] = k.split(',').map(Number)
+      if (Math.hypot(i * CELL - lx, j * CELL - lz) < tol) return true
+    }
+    return false
+  }
+  check('the summit plaza is reachable', near(0, 20, 40))
+  check('the Market Plaza is reachable', near(LANDMARKS.marketPlaza.bearing, LANDMARKS.marketPlaza.radius))
+  check('Galley-La HQ is reachable', near(LANDMARKS.galleyLaHQ.bearing, LANDMARKS.galleyLaHQ.radius + 45))
+  check('Blue Station is reachable', near(LANDMARKS.blueStation.bearing, LANDMARKS.blueStation.radius - 30))
+  for (const d of DOCKS) {
+    check(`Dock ${d.n} quay is reachable`, near(d.bearing, d.radius - 26, 30))
+  }
+
+  const ys = [...heights.values()]
+  check('reachable ground spans every terrace',
+    Math.max(...ys) - Math.min(...ys) > 80,
+    `${Math.min(...ys).toFixed(0)} m to ${Math.max(...ys).toFixed(0)} m`)
+}
+
+// The hand-placed landmarks are meshes no generator knows about, so nothing would
+// notice if they had no collision — which for a long time they did not, and you could
+// walk straight through Galley-La HQ.
+console.log('\n== The landmarks are solid ==')
+{
+  const solid = landmarkColliders()
+  const at = (bearing, radius) => {
+    const [x, z] = polar(radius, bearing)
+    return blocked(x, z, solid, 0.45)
+  }
+  check('Great Fountain is solid', at(0, 8))
+  // The HQ is two buildings with a forecourt between them, so both are checked and the
+  // courtyard is expected to stay open.
+  const hq = LANDMARKS.galleyLaHQ
+  check('Galley-La timber hall is solid', at(hq.bearing, hq.radius + 12))
+  check('Galley-La stone block is solid', at(hq.bearing, hq.radius - 16))
+  check('the HQ forecourt is walkable', !at(hq.bearing, hq.radius + 34))
+  check('Blue Station concourse is solid', at(LANDMARKS.blueStation.bearing, LANDMARKS.blueStation.radius))
+  check('Franky House is solid', at(52, 458))
+  // Dock gates block either side of the arch, but you can walk in through the opening.
+  const d = DOCKS[0]
+  const halfArc = (d.width * 0.42 / (DOCK_BASIN.innerR - 5)) / DEG
+  check('dock gate piers are solid', at(d.bearing + halfArc, DOCK_BASIN.innerR - 5))
+  check('dock gate arch is walk-through', !at(d.bearing, DOCK_BASIN.innerR - 5))
+  // And the summit plaza must not be swallowed by the fountain.
+  check('summit plaza is walkable around the fountain', !at(0, 48))
 }
 
 console.log(`\n${failures === 0 ? 'ALL LAYOUT INVARIANTS HOLD' : failures + ' FAILURE(S)'}\n`)

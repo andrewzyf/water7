@@ -2,17 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { boatGeometry } from '../world/boatGeometry.js'
+import { yagaraBodyGeometry, yagaraHeadGeometry, yagaraTrimGeometry } from '../world/yagaraGeometry.js'
 import { isWaterAt, heightAt } from '../world/terrain.js'
 import { waterLevelAt, bearingOf } from '../world/terrain.js'
 import { timberTexture } from '../world/textures.js'
 import { debugCam } from '../world/debugCamera.js'
+import { MIN_ZOOM, MAX_ZOOM } from './Player.jsx'
 
 /**
- * The player's boat.
+ * The player's water vehicle — a rowing boat, or a Yagara Bull they have climbed onto.
  *
- * Steer and throttle only — no combat, no damage, nothing to fail at. Water 7's streets
- * are canals, so being able to leave the quay and run the ring canal or the open sea is
- * the other half of exploring the place.
+ * Steer and throttle only, no combat and nothing to fail at. Water 7's streets are
+ * canals, so leaving the quay is the other half of exploring the place, and a Yagara is
+ * how the locals do it.
  *
  * Water is not one level here: each terrace holds its canals at its own height, so the
  * boat floats at whatever level the water under it happens to be, and it simply will not
@@ -21,19 +23,29 @@ import { debugCam } from '../world/debugCamera.js'
  */
 
 const MAX_SPEED = 15
+const YAGARA_MAX_SPEED = 21   // a bull is quicker than oars
+const YAGARA_TURN = 1.4
 const REVERSE_SPEED = 5
 const ACCEL = 7
 const DRAG = 0.9
 const TURN_RATE = 1.05
 
-export default function PlayerBoat({ active, onExit, spawn, playerState }) {
+export default function PlayerBoat({ active, spawn, playerState, kind = 'boat' }) {
   const { camera, gl } = useThree()
   const hull = useRef()
   const keys = useRef({})
   const look = useRef({ yaw: 0, pitch: -0.2 })
   const state = useRef({ x: 0, z: 0, y: 0, heading: 0, speed: 0 })
   const camPos = useRef(new THREE.Vector3())
+  const zoom = useRef(15)
+  const dragging = useRef(false)
   const geo = useMemo(() => boatGeometry({ length: 8.2, beam: 2.6, depth: 1.2 }), [])
+  const bull = useMemo(() => ({
+    body: yagaraBodyGeometry(),
+    head: yagaraHeadGeometry(),
+    trim: yagaraTrimGeometry(),
+  }), [])
+  const riding = kind === 'yagara'
   const timber = useMemo(() => {
     const t = timberTexture()
     t.repeat.set(2, 1)
@@ -53,21 +65,37 @@ export default function PlayerBoat({ active, onExit, spawn, playerState }) {
   useEffect(() => {
     const down = (e) => { keys.current[e.code] = true }
     const up = (e) => { keys.current[e.code] = false }
+    const mouseDown = (e) => { if (e.button === 0) dragging.current = true }
+    const mouseUp = () => { dragging.current = false }
     const move = (e) => {
       if (!active) return
-      if (document.pointerLockElement !== gl.domElement) return
-      look.current.yaw -= e.movementX * 0.0022
+      const locked = document.pointerLockElement === gl.domElement
+      if (!locked && !dragging.current) return
+      look.current.yaw -= e.movementX * 0.0032
       look.current.pitch = THREE.MathUtils.clamp(
-        look.current.pitch - e.movementY * 0.0019, -0.9, 0.5,
+        look.current.pitch - e.movementY * 0.0032, -1.1, 0.7,
       )
     }
+    const wheel = (e) => {
+      if (!active) return
+      e.preventDefault()
+      const f = Math.exp(e.deltaY * 0.0012)
+      zoom.current = THREE.MathUtils.clamp(zoom.current * f, MIN_ZOOM, MAX_ZOOM)
+    }
+
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', mouseUp)
+    gl.domElement.addEventListener('mousedown', mouseDown)
+    gl.domElement.addEventListener('wheel', wheel, { passive: false })
     return () => {
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
       window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', mouseUp)
+      gl.domElement.removeEventListener('mousedown', mouseDown)
+      gl.domElement.removeEventListener('wheel', wheel)
     }
   }, [active, gl])
 
@@ -78,15 +106,16 @@ export default function PlayerBoat({ active, onExit, spawn, playerState }) {
     const s = state.current
 
     // Throttle.
+    const topSpeed = riding ? YAGARA_MAX_SPEED : MAX_SPEED
     const fwd = (k.KeyW || k.ArrowUp) ? 1 : (k.KeyS || k.ArrowDown) ? -1 : 0
-    if (fwd > 0) s.speed = Math.min(MAX_SPEED, s.speed + ACCEL * dt)
+    if (fwd > 0) s.speed = Math.min(topSpeed, s.speed + ACCEL * dt)
     else if (fwd < 0) s.speed = Math.max(-REVERSE_SPEED, s.speed - ACCEL * dt)
     else s.speed *= Math.pow(DRAG, dt * 60 / 60 + dt * 2)
 
     // Rudder only bites when making way, as a boat's does.
     const turn = (k.KeyA || k.ArrowLeft) ? 1 : (k.KeyD || k.ArrowRight) ? -1 : 0
     const bite = THREE.MathUtils.clamp(Math.abs(s.speed) / 5, 0, 1)
-    s.heading += turn * TURN_RATE * bite * dt * Math.sign(s.speed || 1)
+    s.heading += turn * (riding ? YAGARA_TURN : TURN_RATE) * bite * dt * Math.sign(s.speed || 1)
 
     // Advance, refusing to leave the water. Each axis is retried alone so the hull
     // slides along a quay wall instead of stopping dead against it — canals are narrow
@@ -125,7 +154,9 @@ export default function PlayerBoat({ active, onExit, spawn, playerState }) {
       running: Math.abs(s.speed) > 8,
       onBridge: false,
       inBoat: true,
+      riding,
       speed: s.speed,
+      zoom: zoom.current,
     }
 
     if (debugCam.active) {
@@ -135,10 +166,10 @@ export default function PlayerBoat({ active, onExit, spawn, playerState }) {
     }
 
     const { yaw, pitch } = look.current
-    const dist = 13
+    const dist = zoom.current
     const cx = s.x + Math.sin(yaw) * Math.cos(pitch) * dist
     const cz = s.z + Math.cos(yaw) * Math.cos(pitch) * dist
-    const cy = s.y + 4.2 + Math.sin(-pitch) * dist
+    const cy = s.y + 3.0 + Math.sin(-pitch) * dist + dist * 0.12
     const ground = heightAt(cx, cz)
     camPos.current.lerp(new THREE.Vector3(cx, Math.max(cy, ground + 2.2), cz), Math.min(1, dt * 6))
     camera.position.copy(camPos.current)
@@ -146,11 +177,56 @@ export default function PlayerBoat({ active, onExit, spawn, playerState }) {
   })
 
   if (!active) return null
+
+  /** A small figure so it is obvious the player is aboard rather than a camera. */
+  const rider = (y, z) => (
+    <group position={[0, y, z]}>
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <capsuleGeometry args={[0.3, 0.85, 6, 10]} />
+        <meshStandardMaterial color="#d94f3d" roughness={0.75} />
+      </mesh>
+      <mesh position={[0, 1.25, 0]} castShadow>
+        <sphereGeometry args={[0.27, 14, 10]} />
+        <meshStandardMaterial color="#f0c9a4" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 1.44, 0]} castShadow>
+        <cylinderGeometry args={[0.58, 0.58, 0.06, 16]} />
+        <meshStandardMaterial color="#e8c96a" roughness={0.9} />
+      </mesh>
+    </group>
+  )
+
+  if (riding) {
+    return (
+      <group ref={hull}>
+        <mesh geometry={bull.body} scale={1.45} castShadow receiveShadow>
+          <meshStandardMaterial color="#9db3c0" roughness={0.62} />
+        </mesh>
+        <mesh geometry={bull.head} scale={1.45} castShadow>
+          <meshStandardMaterial color="#9db3c0" roughness={0.62} />
+        </mesh>
+        <mesh geometry={bull.trim} scale={1.45} castShadow>
+          <meshStandardMaterial color="#2a2f33" roughness={0.5} />
+        </mesh>
+        {/* Seated behind the neck, clear of the body — which is scaled up 1.45. */}
+        {rider(1.95, -1.0)}
+        {/* Reins, so the pose reads as riding rather than balancing. */}
+        {[-0.42, 0.42].map((ox) => (
+          <mesh key={ox} position={[ox, 2.75, 0.35]} rotation={[0.75, 0, 0]}>
+            <cylinderGeometry args={[0.045, 0.045, 2.2, 6]} />
+            <meshStandardMaterial color="#4a3a28" roughness={0.9} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
   return (
     <group ref={hull}>
       <mesh geometry={geo} castShadow receiveShadow>
         <meshStandardMaterial map={timber} color="#8a6a45" roughness={0.86} side={THREE.DoubleSide} />
       </mesh>
+      {rider(0.35, -1.0)}
       {/* Awning over the after thwart. */}
       <mesh position={[0, 2.0, -1.2]} castShadow>
         <boxGeometry args={[2.8, 0.14, 3.2]} />
